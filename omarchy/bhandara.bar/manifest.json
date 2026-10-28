@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "bhandara.bar",
+  "name": "Bhandara",
+  "version": "1.0.0",
+  "author": "Bhandara contributors",
+  "description": "Disk usage ring in the bar with a panel of every mounted volume, live read/write throughput, eject for removable drives, and the largest folders in your home directory",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Bhandara Storage",
+    "description": "Disk usage ring with a detailed storage panel",
+    "category": "System",
+    "aliases": [
+      "storage",
+      "disk"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "label": "used",
+      "mount": "/"
+    },
+    "schema": [
+      {
+        "key": "label",
+        "type": "enum",
+        "label": "Bar label",
+        "options": [
+          "used",
+          "free",
+          "none"
+        ],
+        "defaultValue": "used",
+        "description": "Percentage used, space free, or just the ring. Right-click the widget to cycle."
+      },
+      {
+        "key": "mount",
+        "type": "string",
+        "label": "Volume shown in the bar",
+        "defaultValue": "/",
+        "description": "Any mount point of the volume to summarize, e.g. / or /home."
+      }
+    ]
+  }
+}
