@@ -1,4 +1,4 @@
-import { api, type FolderUsage, type Volume } from './api'
+import { ACCESS_NEEDED, api, type FolderUsage, type ScanProgress, type Volume } from './api'
 
 const HISTORY = 60
 
@@ -13,6 +13,9 @@ export class Storage {
   /** False when the platform exposes no throughput counters. */
   hasThroughput = $state(true)
   scanning = $state(false)
+  scanProgress = $state<ScanProgress>({ done: 0, total: 0 })
+  /** Android: folders cannot be measured until all-files access is granted. */
+  needsAccess = $state(false)
   error = $state('')
   ejecting = $state('')
 
@@ -31,10 +34,13 @@ export class Storage {
   async refreshFolders(force = false) {
     if (this.scanning) return
     this.scanning = true
+    this.scanProgress = { done: 0, total: 0 }
     try {
       this.folders = await api.largestFolders(force)
+      this.needsAccess = false
     } catch (e) {
-      this.error = String(e)
+      if (e === ACCESS_NEEDED) this.needsAccess = true
+      else this.error = String(e)
     } finally {
       this.scanning = false
     }
@@ -62,6 +68,10 @@ export class Storage {
     }
   }
 
+  requestAccess() {
+    api.requestStorageAccess().catch((e) => (this.error = String(e)))
+  }
+
   open(path: string) {
     api.openPath(path).catch((e) => (this.error = String(e)))
   }
@@ -75,6 +85,16 @@ export class Storage {
       setInterval(() => this.refreshVolumes(), 5000),
       setInterval(() => this.refreshFolders(), 60_000),
     ]
-    return () => timers.forEach(clearInterval)
+    const unlisten = api.onScanProgress((progress) => (this.scanProgress = progress))
+    // Coming back from Android's access settings screen: check again.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && this.needsAccess) this.refreshFolders(true)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      timers.forEach(clearInterval)
+      unlisten.then((stop) => stop())
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }
 }

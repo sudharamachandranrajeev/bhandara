@@ -73,6 +73,7 @@ fn sort(volumes: &mut [Volume]) {
     volumes.sort_by(|a, b| a.kind.cmp(&b.kind).then_with(|| a.mount.cmp(&b.mount)));
 }
 
+#[cfg_attr(target_os = "android", allow(dead_code))]
 /// Drive-marketing style size used by file managers for unlabelled volumes:
 /// 127.8 GB of partition space reads as a "128 GB Volume".
 fn size_label(bytes: u64) -> String {
@@ -314,36 +315,28 @@ pub fn volumes() -> std::io::Result<Vec<Volume>> {
     for disk in Disks::new_with_refreshed_list().list() {
         let mount = disk.mount_point().to_string_lossy().into_owned();
         let device = disk.name().to_string_lossy().into_owned();
+        let size = disk.total_space();
+        let avail = disk.available_space();
+        if size == 0 || volumes.iter().any(|v: &Volume| v.mount == mount) {
+            continue;
+        }
 
-        // Android lists dozens of system mounts; keep the user-facing ones.
         #[cfg(target_os = "android")]
-        if !(mount == "/data" || mount.starts_with("/storage/")) {
-            continue;
-        }
-        if disk.total_space() == 0 || volumes.iter().any(|v: &Volume| v.device == device && !device.is_empty()) {
-            continue;
-        }
+        let Some((kind, name)) = android::classify(&mount) else { continue };
+        // Android cards cannot be ejected from an app.
+        #[cfg(target_os = "android")]
+        let removable = false;
 
+        #[cfg(windows)]
         let removable = disk.is_removable();
         #[cfg(windows)]
-        let system = mount.trim_end_matches('\\').to_uppercase() == system_drive;
-        #[cfg(not(windows))]
-        let system = mount == "/data";
-        let kind = if system {
-            Kind::System
-        } else if removable {
-            Kind::Removable
+        let (kind, name) = if mount.trim_end_matches('\\').to_uppercase() == system_drive {
+            (Kind::System, format!("System ({})", mount.trim_end_matches('\\')))
         } else {
-            Kind::Internal
-        };
-
-        let avail = disk.available_space();
-        let size = disk.total_space();
-        let name = match kind {
-            Kind::System if cfg!(windows) => format!("System ({})", mount.trim_end_matches('\\')),
-            Kind::System => "Internal storage".into(),
-            _ if !device.is_empty() && device != mount => device.clone(),
-            _ => format!("{} Volume", size_label(size)),
+            let kind = if removable { Kind::Removable } else { Kind::Internal };
+            // sysinfo reports the volume label as the name on Windows.
+            let name = if device.is_empty() { format!("{} Volume", size_label(size)) } else { device.clone() };
+            (kind, format!("{name} ({})", mount.trim_end_matches('\\')))
         };
         volumes.push(
             Volume {
@@ -370,6 +363,35 @@ pub fn volumes() -> std::io::Result<Vec<Volume>> {
     }
     sort(&mut volumes);
     Ok(volumes)
+}
+
+#[cfg(any(target_os = "android", test))]
+mod android {
+    use super::Kind;
+
+    /// Android mounts shared storage several times over FUSE
+    /// (/storage/emulated, /storage/self, ...) on top of /data. Show /data
+    /// once as internal storage, plus real cards (/storage/XXXX-XXXX).
+    pub fn classify(mount: &str) -> Option<(Kind, String)> {
+        if mount == "/data" {
+            return Some((Kind::System, "Internal storage".into()));
+        }
+        let card = mount.strip_prefix("/storage/")?;
+        if card.is_empty() || card.contains('/') || card == "emulated" || card == "self" {
+            return None;
+        }
+        Some((Kind::Removable, format!("SD card ({card})")))
+    }
+
+    #[cfg(test)]
+    #[test]
+    fn keeps_data_and_cards_only() {
+        assert_eq!(classify("/data"), Some((Kind::System, "Internal storage".into())));
+        assert_eq!(classify("/storage/1A2B-3C4D"), Some((Kind::Removable, "SD card (1A2B-3C4D)".into())));
+        for hidden in ["/storage/emulated", "/storage/emulated/0", "/storage/self", "/storage/self/primary", "/system", "/data/media", "/mnt/pass_through/0/emulated"] {
+            assert_eq!(classify(hidden), None, "{hidden}");
+        }
+    }
 }
 
 #[cfg(all(test, target_os = "linux"))]

@@ -1,0 +1,19 @@
+[package]
+name = "tauri-plugin-storage-access"
+version = "0.1.0"
+authors = [ "Bhandara contributors" ]
+description = "Android all-files access for Bhandara"
+license = "MIT"
+publish = false
+edition = "2024"
+rust-version = "1.90"
+links = "tauri-plugin-storage-access"
+
+[dependencies]
+tauri = { version = "2.12.5" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[build-dependencies]
+tauri-plugin = { version = "2.7.2", features = ["build"] }

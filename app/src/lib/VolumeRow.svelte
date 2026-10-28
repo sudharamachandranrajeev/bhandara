@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Volume } from './api'
+  import { canOpenPaths, type Volume } from './api'
   import type { Storage } from './storage.svelte'
   import { formatBytes, percent, shortMount } from './format'
 
@@ -18,7 +18,14 @@
 </script>
 
 <div class="row">
-  <button class="main" onclick={() => storage.open(volume.mount)} title="Open {volume.mount}">
+  <svelte:element
+    this={canOpenPaths ? 'button' : 'div'}
+    class="main"
+    class:clickable={canOpenPaths}
+    role={canOpenPaths ? undefined : 'group'}
+    onclick={canOpenPaths ? () => storage.open(volume.mount) : undefined}
+    title={canOpenPaths ? `Open ${volume.mount}` : volume.mount}
+  >
     <div class="head">
       <span class="name">{volume.name}</span>
       <span class="pct {volume.level}">{percent(volume.fraction)}</span>
@@ -28,7 +35,7 @@
       <span class="meta">{meta}</span>
       <span class="free">{formatBytes(volume.avail)} free of {formatBytes(volume.used + volume.avail)}</span>
     </div>
-  </button>
+  </svelte:element>
   {#if volume.removable}
     <button
       class="eject"
@@ -54,6 +61,7 @@
     padding: 12px 14px;
     border-radius: 14px;
     text-align: left;
+    background: var(--button);
   }
   .head,
   .foot {

@@ -106,7 +106,7 @@ button {
     transform 0.2s;
 }
 
-button:hover:not(:disabled) {
+button:hover:not(:disabled, .primary) {
   background: var(--hover);
   border-color: var(--card-border);
 }
@@ -123,6 +123,15 @@ button:disabled {
 button:focus-visible {
   outline: 2px solid var(--normal-a);
   outline-offset: 2px;
+}
+
+button.primary {
+  padding: 12px;
+  border-radius: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--normal-a), var(--normal-b));
+  color: #fff;
+  border: none;
 }
 
 button.ghost {

@@ -167,14 +167,6 @@
     background: color-mix(in srgb, var(--critical-a) 15%, transparent);
     color: var(--critical-a);
   }
-  .primary {
-    padding: 12px;
-    border-radius: 14px;
-    font-weight: 600;
-    background: linear-gradient(135deg, var(--normal-a), var(--normal-b));
-    color: #fff;
-    border: none;
-  }
   @media (max-width: 720px) {
     main {
       padding: 16px;

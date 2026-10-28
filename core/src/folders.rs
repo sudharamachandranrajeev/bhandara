@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use walkdir::WalkDir;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -41,18 +42,28 @@ fn size_of(path: &Path) -> u64 {
 }
 
 /// The `limit` largest direct children of `dir`, biggest first. Each child
-/// is measured on its own thread.
-pub fn largest_children(dir: &Path, limit: usize) -> std::io::Result<FolderUsage> {
+/// is measured on its own thread; `progress(done, total)` is called as each
+/// one finishes.
+pub fn largest_children(dir: &Path, limit: usize, progress: impl Fn(usize, usize) + Sync) -> std::io::Result<FolderUsage> {
     let children: Vec<PathBuf> = std::fs::read_dir(dir)?.filter_map(Result::ok).map(|e| e.path()).collect();
+    let done = AtomicUsize::new(0);
+    progress(0, children.len());
 
     let mut folders: Vec<Folder> = std::thread::scope(|scope| {
         let handles: Vec<_> = children
             .iter()
-            .map(|path| scope.spawn(move || Folder {
-                name: path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
-                bytes: if path.is_symlink() { 0 } else { size_of(path) },
-                path: path.clone(),
-            }))
+            .map(|path| {
+                let (done, progress, total) = (&done, &progress, children.len());
+                scope.spawn(move || {
+                    let folder = Folder {
+                        name: path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+                        bytes: if path.is_symlink() { 0 } else { size_of(path) },
+                        path: path.clone(),
+                    };
+                    progress(done.fetch_add(1, Ordering::Relaxed) + 1, total);
+                    folder
+                })
+            })
             .collect();
         handles.into_iter().filter_map(|h| h.join().ok()).collect()
     });
@@ -79,8 +90,14 @@ mod tests {
         fs::write(root.join("big/nested/b"), vec![0; 300]).unwrap();
         fs::write(root.join("loose"), vec![0; 5]).unwrap();
 
-        let usage = largest_children(&root, 5).unwrap();
+        let calls = std::sync::Mutex::new(Vec::new());
+        let usage = largest_children(&root, 5, |done, total| calls.lock().unwrap().push((done, total))).unwrap();
         fs::remove_dir_all(&root).unwrap();
+
+        // Starts at zero, then one call per child (big, small, loose).
+        let mut calls = calls.into_inner().unwrap();
+        calls.sort();
+        assert_eq!(calls, [(0, 3), (1, 3), (2, 3), (3, 3)]);
 
         assert_eq!(usage.total, 315);
         let names: Vec<&str> = usage.folders.iter().map(|f| f.name.as_str()).collect();
