@@ -1,5 +1,4 @@
 use serde::Serialize;
-use std::time::Instant;
 
 /// Bytes per second, summed over the given volumes.
 #[derive(Serialize, Clone, Copy, Debug, Default, PartialEq)]
@@ -37,6 +36,7 @@ impl Default for Throughput {
 mod platform {
     use super::*;
     use std::collections::HashMap;
+    use std::time::Instant;
 
     type Sample = HashMap<String, (u64, u64)>;
 
