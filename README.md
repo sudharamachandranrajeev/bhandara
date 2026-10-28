@@ -1,5 +1,7 @@
 # Bhandara
 
+<a href="https://github.com/sudharamachandranrajeev/brahma"><img src="https://img.shields.io/badge/part%20of-Brahma-8a5cf6" alt="Part of Brahma"></a>
+
 **Bhandara** (भण्डार, "storeroom") is a cross-platform storage monitor for Linux (Omarchy), Windows and Android.
 
 ## Modules
