@@ -1,66 +1,175 @@
-# Bhandara
+<h1 align="center">
+  <br>
+  <a href="https://github.com/sudharamachandranrajeev/bhandara"><img src="app/src-tauri/icons/icon.png" alt="Bhandara" width="140"></a>
+  <br>
+  Bhandara
+  <br>
+</h1>
 
-<a href="https://github.com/sudharamachandranrajeev/brahma"><img src="https://img.shields.io/badge/part%20of-Brahma-8a5cf6" alt="Part of Brahma"></a>
+<h4 align="center">See how full your disks are, what is filling them, and when they are busy.</h4>
 
-**Bhandara** (भण्डार, "storeroom") is a cross-platform storage monitor for Linux (Omarchy), Windows and Android.
+<p align="center">
+  <a href="https://github.com/sudharamachandranrajeev/bhandara/releases"><img src="https://img.shields.io/github/v/release/sudharamachandranrajeev/bhandara?include_prereleases&color=2b6cb0&label=download" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/works%20on-Omarchy%20%7C%20Windows%20%7C%20Android-555" alt="Works on Omarchy, Windows and Android">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-2e7d32" alt="Licence MIT"></a>
+  <a href="https://github.com/sudharamachandranrajeev/brahma"><img src="https://img.shields.io/badge/part%20of-Brahma-8a5cf6" alt="Part of Brahma"></a>
+</p>
 
-## Modules
+<p align="center">
+  <a href="#-what-it-does">What it does</a> •
+  <a href="#-get-started">Get started</a> •
+  <a href="#-how-it-works">How it works</a> •
+  <a href="#-faq-and-troubleshooting">FAQ</a> •
+  <a href="#%EF%B8%8F-for-developers">For developers</a>
+</p>
 
-- **Bhandara Bar**: Omarchy status bar widget showing a disk usage ring and a storage panel.
-- **Bhandara Darshana** (दर्शन, "view"): a fluid, modern storage dashboard.
-- **Bhandara Swasthya** (स्वास्थ्य, "health"): drive health from SMART data.
-- **Bhandara Suchi** (सूची, "index"): system-wide file index, stats and safe file operations. *Planned.*
+**Bhandara** (भण्डार, "storeroom") is a storage monitor. It shows every disk and drive on your
+computer or phone, how much space is left, and which folders take the most. It comes as a ring in
+the Omarchy bar, a Windows tray icon and a dashboard app. Status: **alpha (0.1)**. It reads your
+disks but never changes or deletes files.
 
-## What works today
+## ✨ What it does
 
-- Every mounted volume with used/free space, model, filesystem and encryption.
-- Live disk read/write throughput (Linux and Windows).
-- The largest folders in your home directory.
-- Eject for removable drives (Linux and Windows).
-- Drive health (Linux and Windows) for NVMe and SATA drives: a plain verdict (Good, Watch, Replace) with the reasons, life used, temperature, hours powered on and data written. A notification when a drive's verdict gets worse.
-- Windows: a tray icon whose ring shows system drive usage, turning amber or red when a drive needs attention. Click it for a quick-view flyout.
-- Omarchy: the bar ring also reflects drive health, and the panel lists each drive.
+- 💽 **Every drive at a glance** – each disk, partition and USB stick with its space used and free,
+  plus its model, file system and whether it is encrypted.
+- 🟠 **Colour warnings** – a drive's ring and bar turn amber at 80% full and red at 90%.
+- 📈 **Disk activity** (Linux, Windows) – live read and write speed, with a short history.
+- 📁 **Largest folders** – the five biggest folders in your home folder (on Android, in shared
+  storage). On a computer, click one to open it.
+- ⏏️ **Eject** (Linux, Windows) – safely eject a USB drive from the list.
+- 🪟 **Windows tray icon** – a ring showing how full your system drive is. Click it for a quick
+  view.
+- 🧭 **Omarchy bar widget** – the same ring in your bar, with a panel of every drive.
 
-## Layout
+Coming later, not in this release: disk health from SMART data (*Swasthya*), and a file index with
+safe file operations (*Suchi*).
 
-| Path | What |
-|---|---|
-| `core/` | Rust crate with all storage logic, shared by every app |
-| `app/` | Tauri 2 app (Svelte 5 UI) for Linux, Windows and Android |
-| `omarchy/bhandara.bar/` | Omarchy shell bar plugin (QML, self-contained) |
-| `packaging/linux/` | systemd units for the drive health helper |
+## 🚀 Get started
 
-## Omarchy bar plugin
+### Step 1 – Pick your version
 
-Copy `omarchy/bhandara.bar` to `~/.config/omarchy/plugins/`, then add the **Bhandara Storage** widget to your bar.
-Right-click the widget to cycle the label (used %, free space, none). Middle-click opens the volume.
+| Your device | What to use | Works on |
+| --- | --- | --- |
+| 🐧 Omarchy | The **bar widget** (Step 2) | Omarchy |
+| 🪟 Windows computer | `Bhandara_<version>_x64-setup.exe` or `Bhandara_<version>_x64_en-US.msi` from the [releases page](https://github.com/sudharamachandranrajeev/bhandara/releases) | Windows 10 and 11 (64-bit) |
+| 🤖 Android phone | `Bhandara_<version>_android-debug.apk` from the [releases page](https://github.com/sudharamachandranrajeev/bhandara/releases) | 64-bit ARM phones (most phones from the last few years) |
+| 🐧 Other Linux | The dashboard app, built from source (see [For developers](#%EF%B8%8F-for-developers)) | 64-bit Linux with WebKitGTK 4.1 |
 
-## Drive health
+Releases are marked *pre-release*, so look under the newest one, not "Latest".
 
-Reading SMART data needs root or admin, so the apps never read drives themselves. A small helper, `bhandara-health`, runs [smartctl](https://www.smartmontools.org/) every 30 minutes and writes a report that anyone can read. Bhandara only reads that report.
+### Step 2 – Install
 
-A drive is **Replace** when it reports a SMART failure, a critical NVMe warning, 95% or more of its rated life used, a failing attribute, or a rise in reallocated, pending, uncorrectable or media-error counts since Bhandara first saw it. It is **Watch** when any of those counts is above zero, life used is 80% or more, or it runs hot.
+<details>
+<summary><b>🐧 Omarchy bar widget</b></summary>
 
-**Windows**: the installer sets everything up. It installs Bhandara for all users and adds a scheduled task, *Bhandara Health*, that runs the helper as SYSTEM. smartctl ships with the installer. If the task is missing, the dashboard offers *Turn on health monitoring*, which asks for admin once.
+1. Download the **Source code** zip from the newest release, or clone this repository.
+2. Open a terminal in that folder and copy the widget into your Omarchy plugins:
+   ```sh
+   mkdir -p ~/.config/omarchy/plugins
+   cp -r omarchy/bhandara.bar ~/.config/omarchy/plugins/
+   ```
+3. Turn it on: `omarchy plugin enable bhandara.bar`. Or add **Bhandara Storage** to your bar from
+   Omarchy's bar settings.
 
-**Linux**: install smartmontools, then the helper and its timer:
+</details>
 
-```sh
-sudo pacman -S smartmontools      # or your distribution's package
-cargo build --release -p bhandara-core --bin bhandara-health
-sudo install -m755 target/release/bhandara-health /usr/local/bin/
-sudo install -m644 packaging/linux/bhandara-health.{service,timer} /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now bhandara-health.timer
+<details>
+<summary><b>🪟 Windows</b></summary>
+
+1. Double-click `Bhandara_<version>_x64-setup.exe` (or the `.msi`).
+2. Windows may say *"Windows protected your PC"*. This appears because the app isn't paid-signed
+   yet, not because it is harmful. Click **More info → Run anyway**.
+3. Follow the installer, then open **Bhandara** from the Start menu.
+
+</details>
+
+<details>
+<summary><b>🤖 Android</b></summary>
+
+1. Open the downloaded `.apk` on your phone. It is large (about 130 MB) because it is a test build.
+2. If Android asks, allow installs from your browser or file manager. This is normal for apps
+   from outside the Play Store.
+3. Tap **Install**, then **Open**.
+
+This is a debug build (a test build signed with a development key). A later signed release may
+not install over it, so you might need to uninstall this one first.
+
+</details>
+
+### Step 3 – First look
+
+- **Omarchy**: the ring sits in your bar and shows how full `/` is.
+  - **Left-click** opens the panel with every drive, disk activity and the largest folders.
+  - **Right-click** switches the label between percentage used, space free, and no label.
+  - **Middle-click** opens the drive in your file manager.
+  - Click **⏏** next to a USB drive to eject it.
+- **Windows**: a ring appears in the tray. Click it for the quick view, then **Open dashboard** for
+  the full window. Closing the dashboard keeps Bhandara in the tray. Right-click the tray icon and
+  choose **Quit** to stop it.
+- **Android**: the app lists your storage. To see the largest folders, tap **Allow access** and
+  turn on **All files access** for Bhandara. Android asks because the app must read every folder
+  to measure it.
+
+To show a different drive in the Omarchy bar, change the widget's **Volume shown in the bar**
+setting (for example `/home`).
+
+## 🧭 How it works
+
+```mermaid
+flowchart LR
+    D["💽 Your disks and drives"] -->|"space, activity, folder sizes"| C["⚙️ Bhandara<br/>reads only"]
+    C --> B["🧭 Omarchy bar ring"]
+    C --> T["🪟 Windows tray icon"]
+    C --> A["📊 Dashboard app<br/>Windows, Linux, Android"]
 ```
 
-The report is written to `/run/bhandara/health.json`. Run `sudo bhandara-health --print` to see it straight away.
+- **It asks the system** how big each drive is and how much is used, and how fast it is reading
+  and writing right now.
+- **Folder sizes** are measured in the background (the Omarchy widget does it at low priority).
+  The app keeps the result for five minutes; press **Rescan** for fresh numbers.
+- **Nothing leaves your device.** Bhandara makes no network requests and keeps no account.
+- **It never changes your files.** The only action it takes is ejecting a drive when you ask.
 
-**Android**: SMART data needs root, so drive health is not shown.
+## ❓ FAQ and troubleshooting
 
-## Development
+<details>
+<summary><b>Windows says the app might be unsafe</b></summary>
 
-You need Rust (stable), Node 22+, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform.
+The installers aren't code-signed (a paid certificate). Click **More info → Run anyway**.
+</details>
+
+<details>
+<summary><b>Android: "Largest folders" asks for access</b></summary>
+
+Tap **Allow access** and switch on **All files access** for Bhandara in the settings page that
+opens. Without it, Android only lets the app see the storage totals.
+</details>
+
+<details>
+<summary><b>Eject says a program is still using the drive</b></summary>
+
+Close any window or program that has files open on that drive, then try again.
+</details>
+
+<details>
+<summary><b>Why is there no disk activity on Android?</b></summary>
+
+Live read and write speeds are available on Linux and Windows only.
+</details>
+
+<details>
+<summary><b>Can I see disk health?</b></summary>
+
+Not yet. Disk health from SMART data is planned as *Bhandara Swasthya*.
+</details>
+
+## 🛠️ For developers
+
+<details>
+<summary>Build from source and test</summary>
+
+You need Rust (stable), Node 22+, and the
+[Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform.
 
 ```sh
 cd app
@@ -68,16 +177,48 @@ npm install
 npm run tauri dev           # run the app
 npm run tauri build         # build installers
 
-cargo test --workspace      # Rust tests
-node --test omarchy/tests/*.test.mjs   # bar plugin tests (from the repo root)
+cargo test --workspace                 # Rust tests
+node --test omarchy/tests/*.test.mjs   # bar widget tests (from the repo root)
 ```
 
-On Linux the app opens as a normal window. To try the tray icon instead, run it with `BHANDARA_TRAY=1`.
+- On Linux the app opens as a normal window. To try the tray icon instead, run it with
+  `BHANDARA_TRAY=1`.
+- CI builds the Windows installers (`.msi`, `.exe`) and an Android debug APK on every push
+  (`.github/workflows/ci.yml`).
 
-CI builds the Windows installer (`.exe`) and an Android debug APK on every push.
+| Path | What |
+| --- | --- |
+| `core/` | Rust crate with all storage logic, shared by every app |
+| `app/` | Tauri 2 app (Svelte 5 UI) for Linux, Windows and Android |
+| `plugins/storage-access/` | Tauri plugin for Android's All files access |
+| `omarchy/bhandara.bar/` | Omarchy bar widget (QML, self-contained) |
+
+</details>
+
+<details>
+<summary>The parts of Bhandara</summary>
+
+- **Bhandara Bar**: the Omarchy bar widget.
+- **Bhandara Darshana** (दर्शन, "view"): the storage dashboard app.
+- **Bhandara Swasthya** (स्वास्थ्य, "health"): disk health and SMART status. *Planned.*
+- **Bhandara Suchi** (सूची, "index"): a file index, stats and safe file operations. *Planned.*
+
+</details>
+
+## Related
+
+Bhandara sits alongside the **Brahma** family of private, self-hosted apps.
+
+| App | What it does |
+| --- | --- |
+| [brahma](https://github.com/sudharamachandranrajeev/brahma) | The shared core and the all-in-one app |
+| [bahya-nireekshana](https://github.com/sudharamachandranrajeev/bahya-nireekshana) | See how much internet data you use |
+| [ganana](https://github.com/sudharamachandranrajeev/ganana) | Track your AI tools' usage, cost and limits |
 
 ## License
 
 [MIT](LICENSE)
 
-The Windows installer also ships smartctl from [smartmontools](https://www.smartmontools.org/), a separate program under the GNU GPL v2; its license is installed next to it as `smartmontools-COPYING.txt`. Source: <https://github.com/smartmontools/smartmontools>.
+---
+
+> GitHub [@sudharamachandranrajeev](https://github.com/sudharamachandranrajeev)
