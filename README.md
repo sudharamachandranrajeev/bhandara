@@ -41,8 +41,10 @@ disks but never changes or deletes files.
   view.
 - 🧭 **Omarchy bar widget** – the same ring in your bar, with a panel of every drive.
 
-Coming later, not in this release: disk health from SMART data (*Swasthya*), and a file index with
-safe file operations (*Suchi*).
+Coming in the next release: 🩺 **drive health** (*Swasthya*) – a plain Good / Watch / Replace verdict
+for each NVMe or SATA drive, with the reasons, life used and temperature, and a notification when a
+drive gets worse ([how it works](docs/drive-health.md)). Planned after that: a file index with safe file
+operations (*Suchi*).
 
 ## 🚀 Get started
 
@@ -160,7 +162,9 @@ Live read and write speeds are available on Linux and Windows only.
 <details>
 <summary><b>Can I see disk health?</b></summary>
 
-Not yet. Disk health from SMART data is planned as *Bhandara Swasthya*.
+In the next release, on Linux and Windows. It reads the drive's own health report (SMART data) through
+a small helper that runs with admin rights, so the app itself never needs them. Android can't show it,
+because SMART data needs root there. Setup: [drive health](docs/drive-health.md).
 </details>
 
 ## 🛠️ For developers
@@ -183,7 +187,7 @@ node --test omarchy/tests/*.test.mjs   # bar widget tests (from the repo root)
 
 - On Linux the app opens as a normal window. To try the tray icon instead, run it with
   `BHANDARA_TRAY=1`.
-- CI builds the Windows installers (`.msi`, `.exe`) and an Android debug APK on every push
+- CI builds the Windows installer (`.exe`) and an Android debug APK on every push
   (`.github/workflows/ci.yml`).
 
 | Path | What |
@@ -200,7 +204,7 @@ node --test omarchy/tests/*.test.mjs   # bar widget tests (from the repo root)
 
 - **Bhandara Bar**: the Omarchy bar widget.
 - **Bhandara Darshana** (दर्शन, "view"): the storage dashboard app.
-- **Bhandara Swasthya** (स्वास्थ्य, "health"): disk health and SMART status. *Planned.*
+- **Bhandara Swasthya** (स्वास्थ्य, "health"): drive health from SMART data. *Next release.*
 - **Bhandara Suchi** (सूची, "index"): a file index, stats and safe file operations. *Planned.*
 
 </details>
@@ -218,6 +222,10 @@ Bhandara sits alongside the **Brahma** family of private, self-hosted apps.
 ## License
 
 [MIT](LICENSE)
+
+From the next release, the Windows installer also ships smartctl from
+[smartmontools](https://www.smartmontools.org/), a separate program under the GNU GPL v2; its licence is
+installed next to it as `smartmontools-COPYING.txt`.
 
 ---
 
