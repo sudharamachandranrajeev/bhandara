@@ -88,7 +88,7 @@ Releases are marked *pre-release*, so look under the newest one, not "Latest".
 
 1. Open the downloaded `.apk` on your phone. It is large (about 130 MB) because it is a test build.
 2. If Android asks, allow installs from your browser or file manager. This is normal for apps
-   from outside the Play Store.
+   from outside an app store.
 3. Tap **Install**, then **Open**.
 
 This is a debug build (a test build signed with a development key). A later signed release may
