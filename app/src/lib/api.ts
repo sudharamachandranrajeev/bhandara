@@ -29,20 +29,84 @@ export interface Rates {
   write: number
 }
 
-export interface Folder {
-  path: string
-  name: string
-  bytes: number
-}
-
-export interface FolderUsage {
-  total: number
-  folders: Folder[]
-}
-
-export interface ScanProgress {
+export interface Progress {
   done: number
   total: number
+}
+
+export interface Totals {
+  /** Apparent size. */
+  size: number
+  /** Space used on disk; cloud-only placeholders count as 0. */
+  alloc: number
+  /** Files at any depth. */
+  count: number
+}
+
+export type Item = { kind: 'dir' | 'file'; id: number }
+
+export interface Entry extends Totals {
+  item: Item
+  name: string
+  /** Unix seconds. */
+  modified: number
+}
+
+export interface FolderView extends Totals {
+  id: number
+  name: string
+  path: string
+  crumbs: { id: number; name: string }[]
+  modified: number
+  mount: boolean
+  entries: Entry[]
+  /** Files under 1 MB directly in this folder, which are not listed. */
+  small: Totals
+}
+
+export interface TypeStat extends Totals {
+  ext: string
+  listed: number
+}
+
+export interface FileView {
+  id: number
+  name: string
+  path: string
+  ext: string
+  size: number
+  alloc: number
+  modified: number
+}
+
+export interface FileFilter {
+  ext?: string
+  minSize?: number
+  modifiedBefore?: number
+  limit?: number
+  /** Filter and sort by space used on disk instead of apparent size. */
+  onDisk?: boolean
+}
+
+export interface Summary extends Totals {
+  root: string
+  folders: number
+  listedFiles: number
+  partial: boolean
+  unreadable: string[]
+  unreadableCount: number
+  scannedAt: number
+}
+
+export interface ScanRoot {
+  name: string
+  path: string
+}
+
+export interface DuplicateGroup {
+  size: number
+  wasted: number
+  files: FileView[]
 }
 
 export type Verdict = 'good' | 'watch' | 'replace'
@@ -76,22 +140,39 @@ export interface HealthStatus {
   canInstall: boolean
 }
 
-/** `largestFolders` rejects with this when Android all-files access is missing. */
+/** `scan` rejects with this when Android all-files access is missing. */
 export const ACCESS_NEEDED = 'ACCESS_NEEDED'
 
-/** Android cannot open a folder in another app, so rows are not clickable there. */
-export const canOpenPaths = !/Android/i.test(navigator.userAgent)
+export const isAndroid = /Android/i.test(navigator.userAgent)
+/** Android cannot open a folder in another app. */
+export const canOpenPaths = !isAndroid
+/** Android has no trash for ordinary files, so delete is permanent there. */
+export const deleteIsPermanent = isAndroid
 
 export const api = {
   volumes: () => invoke<Volume[]>('volumes'),
   /** `null` when the platform exposes no disk counters. */
   throughput: () => invoke<Rates | null>('throughput'),
-  largestFolders: (force = false) => invoke<FolderUsage>('largest_folders', { force }),
   requestStorageAccess: () => invoke<void>('request_storage_access'),
-  onScanProgress: (handler: (progress: ScanProgress) => void): Promise<UnlistenFn> =>
-    listen<ScanProgress>('folders-progress', (event) => handler(event.payload)),
-  openPath: (path: string) => invoke<void>('open_path', { path }),
   eject: (mount: string) => invoke<void>('eject', { mount }),
   health: () => invoke<HealthStatus>('health'),
   installHealth: () => invoke<void>('install_health'),
+  scanRoots: () => invoke<ScanRoot[]>('scan_roots'),
+  scan: (root: string) => invoke<Summary>('scan', { root }),
+  stopScan: () => invoke<void>('stop_scan'),
+  scanSummary: () => invoke<Summary | null>('scan_summary'),
+  folder: (id: number) => invoke<FolderView>('folder', { id }),
+  fileTypes: () => invoke<TypeStat[]>('file_types'),
+  files: (filter: FileFilter) => invoke<FileView[]>('files', { filter }),
+  duplicates: () => invoke<DuplicateGroup[]>('duplicates'),
+  exportDuplicates: (groups: number[][]) => invoke<string>('export_duplicates', { groups }),
+  rescan: (id: number) => invoke<number>('rescan', { id }),
+  deleteItem: (item: Item) => invoke<Totals>('delete_item', { item }),
+  openItem: (item: Item) => invoke<void>('open_item', { item }),
+  openRoot: (path: string) => invoke<void>('open_root', { path }),
+  exclusions: () => invoke<string[]>('exclusions'),
+  exclude: (id: number) => invoke<string[]>('exclude', { id }),
+  include: (path: string) => invoke<string[]>('include', { path }),
+  onProgress: (event: 'scan-progress' | 'duplicates-progress', handler: (progress: Progress) => void): Promise<UnlistenFn> =>
+    listen<Progress>(event, (e) => handler(e.payload)),
 }

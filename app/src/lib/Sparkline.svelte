@@ -1,9 +1,16 @@
 <script lang="ts">
   // Read and write throughput history as two soft area curves.
+  import { Spring } from 'svelte/motion'
+
   let { read = [], write = [], height = 56 }: { read?: number[]; write?: number[]; height?: number } = $props()
 
   const WIDTH = 300
-  const max = $derived(Math.max(64 * 1024, ...read, ...write))
+  // Below 1 MB/s the graph stays flat, so background noise reads as idle.
+  const FLOOR = 1024 * 1024
+  const peak = $derived(Math.max(FLOOR, ...read, ...write) * 1.15)
+  // The scale glides to a new peak instead of jumping with every sample.
+  const scale = Spring.of(() => peak, { stiffness: 0.06, damping: 0.9 })
+  const max = $derived(Math.max(scale.current, ...read, ...write))
 
   function path(values: number[], closed: boolean): string {
     if (values.length < 2) return ''

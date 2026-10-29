@@ -1,39 +1,23 @@
 //! Tauri shell around bhandara-core: commands for the web UI and, on
 //! desktop, a tray icon with a quick-view flyout.
 
-use bhandara_core::{FolderUsage, Rates, Throughput, Volume};
-use std::path::{Path, PathBuf};
+use bhandara_core::{Rates, Throughput, Volume};
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_opener::OpenerExt;
+use tauri::State;
 use tauri_plugin_storage_access::StorageAccessExt;
 
 mod health;
+mod suchi;
 #[cfg(desktop)]
 mod tray;
-
-const FOLDER_LIMIT: usize = 5;
-const FOLDER_TTL: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Default)]
 struct Storage {
     volumes: Mutex<Vec<Volume>>,
     throughput: Mutex<Throughput>,
-    folders: Mutex<Option<(FolderUsage, Instant)>>,
 }
 
 type CommandResult<T> = Result<T, String>;
-
-/// Returned by `largest_folders` when Android's all-files access is missing;
-/// the UI then offers `request_storage_access`.
-const ACCESS_NEEDED: &str = "ACCESS_NEEDED";
-
-#[derive(Clone, serde::Serialize)]
-struct ScanProgress {
-    done: usize,
-    total: usize,
-}
 
 #[tauri::command]
 async fn volumes(storage: State<'_, Storage>) -> CommandResult<Vec<Volume>> {
@@ -51,63 +35,10 @@ fn throughput(storage: State<'_, Storage>) -> Option<Rates> {
     storage.throughput.lock().unwrap().poll(&knames)
 }
 
-/// The user's home on desktop; the shared storage root on Android.
-fn scan_root(app: &AppHandle) -> Option<PathBuf> {
-    if cfg!(target_os = "android") {
-        Some(PathBuf::from("/storage/emulated/0"))
-    } else {
-        app.path().home_dir().ok()
-    }
-}
-
-/// Largest folders in the scan root, cached for five minutes unless `force`.
-/// Emits `folders-progress` events while scanning.
-#[tauri::command]
-async fn largest_folders(app: AppHandle, storage: State<'_, Storage>, force: bool) -> CommandResult<FolderUsage> {
-    if !force && let Some((usage, at)) = storage.folders.lock().unwrap().as_ref() && at.elapsed() < FOLDER_TTL {
-        return Ok(usage.clone());
-    }
-    if !app.storage_access().granted().map_err(|e| e.to_string())? {
-        return Err(ACCESS_NEEDED.into());
-    }
-    let root = scan_root(&app).ok_or("no home directory")?;
-    let emitter = app.clone();
-    let usage = tauri::async_runtime::spawn_blocking(move || {
-        bhandara_core::largest_children(&root, FOLDER_LIMIT, |done, total| {
-            let _ = emitter.emit("folders-progress", ScanProgress { done, total });
-        })
-    })
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
-    *storage.folders.lock().unwrap() = Some((usage.clone(), Instant::now()));
-    Ok(usage)
-}
-
-/// The web UI may only open what it was shown: a known mount point or a
-/// listed folder.
-fn is_known_path(storage: &Storage, path: &Path) -> bool {
-    let mounted = storage.volumes.lock().unwrap().iter().any(|v| v.mounts.iter().any(|m| Path::new(m) == path));
-    let listed = storage.folders.lock().unwrap().as_ref().is_some_and(|(usage, _)| usage.folders.iter().any(|f| f.path == path));
-    mounted || listed
-}
-
 /// Opens Android's "All files access" screen; a no-op on desktop.
 #[tauri::command]
-fn request_storage_access(app: AppHandle) -> CommandResult<()> {
+fn request_storage_access(app: tauri::AppHandle) -> CommandResult<()> {
     app.storage_access().request().map_err(|e| e.to_string())
-}
-
-/// Desktop only: Android has no standard way to open a folder in another app.
-#[tauri::command]
-fn open_path(app: AppHandle, storage: State<'_, Storage>, path: PathBuf) -> CommandResult<()> {
-    if cfg!(target_os = "android") {
-        return Err("opening folders is not supported on Android".into());
-    }
-    if !is_known_path(&storage, &path) {
-        return Err("unknown path".into());
-    }
-    app.opener().open_path(path.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -146,7 +77,31 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_storage_access::init())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![volumes, throughput, largest_folders, request_storage_access, open_path, eject, health, install_health])
+        .manage(suchi::Suchi::default())
+        .invoke_handler(tauri::generate_handler![
+            volumes,
+            throughput,
+            request_storage_access,
+            eject,
+            health,
+            install_health,
+            suchi::scan_roots,
+            suchi::scan,
+            suchi::stop_scan,
+            suchi::scan_summary,
+            suchi::folder,
+            suchi::file_types,
+            suchi::files,
+            suchi::duplicates,
+            suchi::export_duplicates,
+            suchi::rescan,
+            suchi::delete_item,
+            suchi::open_item,
+            suchi::open_root,
+            suchi::exclusions,
+            suchi::exclude,
+            suchi::include,
+        ])
         .setup(|_app| {
             #[cfg(desktop)]
             {

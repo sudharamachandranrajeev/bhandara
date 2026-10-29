@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { canOpenPaths, type Volume } from './api'
+  import type { Volume } from './api'
   import type { Storage } from './storage.svelte'
   import { formatBytes, percent, shortMount } from './format'
 
-  let { volume, storage }: { volume: Volume; storage: Storage } = $props()
+  // `onopen` shows the volume's files in the app; the flyout has no Files view.
+  let { volume, storage, onopen }: { volume: Volume; storage: Storage; onopen?: () => void } = $props()
 
   const meta = $derived(
     [
@@ -19,12 +20,12 @@
 
 <div class="row">
   <svelte:element
-    this={canOpenPaths ? 'button' : 'div'}
+    this={onopen ? 'button' : 'div'}
     class="main"
-    class:clickable={canOpenPaths}
-    role={canOpenPaths ? undefined : 'group'}
-    onclick={canOpenPaths ? () => storage.open(volume.mount) : undefined}
-    title={canOpenPaths ? `Open ${volume.mount}` : volume.mount}
+    class:clickable={!!onopen}
+    role={onopen ? undefined : 'group'}
+    onclick={onopen}
+    title={onopen ? `Browse ${volume.mount}` : volume.mount}
   >
     <div class="head">
       <span class="name">{volume.name}</span>
@@ -62,6 +63,9 @@
     border-radius: 14px;
     text-align: left;
     background: var(--button);
+  }
+  .clickable:hover {
+    background: var(--hover);
   }
   .head,
   .foot {

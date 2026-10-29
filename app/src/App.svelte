@@ -1,10 +1,12 @@
 <script lang="ts">
   import { getCurrentWindow, Window } from '@tauri-apps/api/window'
-  import Folders from './lib/Folders.svelte'
+  import FilesView from './lib/FilesView.svelte'
   import Health from './lib/Health.svelte'
   import Ring from './lib/Ring.svelte'
   import Throughput from './lib/Throughput.svelte'
+  import TopFolders from './lib/TopFolders.svelte'
   import VolumeRow from './lib/VolumeRow.svelte'
+  import { Files } from './lib/files.svelte'
   import { Storage } from './lib/storage.svelte'
   import { formatBytes, percent } from './lib/format'
 
@@ -13,6 +15,18 @@
   const storage = new Storage()
 
   $effect(() => storage.start())
+
+  // Only the dashboard indexes files; the flyout stays light.
+  const files = flyout ? null : new Files()
+  let view = $state<'overview' | 'files'>('overview')
+
+  $effect(() => files?.start())
+
+  function browse(mount?: string) {
+    if (mount) files?.show(mount)
+    view = 'files'
+    window.scrollTo({ top: 0 })
+  }
 
   async function openDashboard() {
     const main = await Window.getByLabel('main')
@@ -24,6 +38,16 @@
 </script>
 
 <main class:flyout>
+  {#if files}
+    <nav class="views" aria-label="Views">
+      <button class:on={view === 'overview'} onclick={() => (view = 'overview')}>Overview</button>
+      <button class:on={view === 'files'} onclick={() => browse()}>Files</button>
+    </nav>
+  {/if}
+
+  {#if files && view === 'files'}
+    <FilesView {files} />
+  {:else}
   {#if storage.system}
     {@const system = storage.system}
     <section class="card hero">
@@ -47,7 +71,7 @@
       <h2>Volumes</h2>
       <div class="list">
         {#each storage.volumes as volume (volume.device)}
-          <VolumeRow {volume} {storage} />
+          <VolumeRow {volume} {storage} onopen={files ? () => browse(volume.mount) : undefined} />
         {/each}
       </div>
     </section>
@@ -55,9 +79,10 @@
     <div class="side">
       <Health {storage} compact={flyout} />
       <Throughput {storage} height={flyout ? 40 : 72} />
-      {#if !flyout}<Folders {storage} />{/if}
+      {#if files}<TopFolders {files} onopen={() => browse()} />{/if}
     </div>
   </div>
+  {/if}
 
   {#if storage.error}
     <p class="error" role="alert">{storage.error}</p>
@@ -79,6 +104,26 @@
   main.flyout {
     padding: 12px;
     gap: 10px;
+  }
+  .views {
+    display: flex;
+    gap: 4px;
+    width: fit-content;
+    padding: 4px;
+    border-radius: 14px;
+    background: var(--button);
+  }
+  .views button {
+    padding: 7px 18px;
+    border-radius: 10px;
+    background: transparent;
+    font-weight: 500;
+  }
+  .views .on {
+    background: var(--card);
+    border-color: var(--card-border);
+    color: var(--normal-a);
+    font-weight: 600;
   }
   .hero {
     display: flex;

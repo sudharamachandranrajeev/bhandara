@@ -26,7 +26,7 @@
 **Bhandara** (भण्डार, "storeroom") is a storage monitor. It shows every disk and drive on your
 computer or phone, how much space is left, and which folders take the most. It comes as a ring in
 the Omarchy bar, a Windows tray icon and a dashboard app. Status: **alpha (0.1)**. It reads your
-disks but never changes or deletes files.
+disks and changes nothing, except a file or folder you choose to delete.
 
 ## ✨ What it does
 
@@ -41,10 +41,15 @@ disks but never changes or deletes files.
   view.
 - 🧭 **Omarchy bar widget** – the same ring in your bar, with a panel of every drive.
 
-Coming in the next release: 🩺 **drive health** (*Swasthya*) – a plain Good / Watch / Replace verdict
-for each NVMe or SATA drive, with the reasons, life used and temperature, and a notification when a
-drive gets worse ([how it works](docs/drive-health.md)). Planned after that: a file index with safe file
-operations (*Suchi*).
+Coming in the next release:
+
+- 🩺 **Drive health** (*Swasthya*) – a plain Good / Watch / Replace verdict for each NVMe or SATA
+  drive, with the reasons, life used and temperature, and a notification when a drive gets worse
+  ([how it works](docs/drive-health.md)).
+- 🗂️ **Files view** (*Suchi*) – browse everything on a drive inside the app, biggest first. See space
+  by file type, the largest files (filter by size and age), and files that are exact copies of each
+  other. Delete what you don't need: it goes to the Trash (on Android it is deleted for good, after
+  a warning).
 
 ## 🚀 Get started
 
@@ -112,6 +117,16 @@ not install over it, so you might need to uninstall this one first.
   turn on **All files access** for Bhandara. Android asks because the app must read every folder
   to measure it.
 
+**Files view** (next release, dashboard app):
+
+1. Click **Files** at the top, or click a drive in the list.
+2. Bhandara scans it. Your home folder takes a few seconds; a whole drive takes longer. **Stop**
+   keeps what was found so far.
+3. Click a folder to go into it. Use the path at the top to go back.
+4. Point at a row to see its buttons: open it in your file manager, leave a folder out of future
+   scans, or delete it. Bhandara always asks before deleting.
+5. The tabs show space by **Types**, the **Largest files**, and **Duplicates**.
+
 To show a different drive in the Omarchy bar, change the widget's **Volume shown in the bar**
 setting (for example `/home`).
 
@@ -130,7 +145,13 @@ flowchart LR
 - **Folder sizes** are measured in the background (the Omarchy widget does it at low priority).
   The app keeps the result for five minutes; press **Rescan** for fresh numbers.
 - **Nothing leaves your device.** Bhandara makes no network requests and keeps no account.
-- **It never changes your files.** The only action it takes is ejecting a drive when you ask.
+- **The Files view** lists every folder, and every file of 1 MB or more. Smaller files are counted
+  in their folder but not listed one by one, which keeps the scan fast. Other drives mounted inside
+  the scanned folder are skipped.
+- **Duplicates** are found by comparing file contents, not names. Two links to the same file are
+  not counted as copies.
+- **It never changes your files on its own.** It only ejects a drive or deletes an item when you
+  ask, and it asks again before deleting.
 
 ## ❓ FAQ and troubleshooting
 
@@ -145,6 +166,21 @@ The installers aren't code-signed (a paid certificate). Click **More info → Ru
 
 Tap **Allow access** and switch on **All files access** for Bhandara in the settings page that
 opens. Without it, Android only lets the app see the storage totals.
+</details>
+
+<details>
+<summary><b>What is the difference between "On disk" and "Size"?</b></summary>
+
+**On disk** is the space files really take on the drive. **Size** is what the files say they
+hold. They differ for compressed or sparse files (such as virtual machine disks), and for cloud
+files that are not downloaded yet, which take no space on disk.
+</details>
+
+<details>
+<summary><b>Where do deleted files go?</b></summary>
+
+On Linux and Windows, to the Trash (Recycle Bin), so you can restore them. Android has no Trash for
+these files, so Bhandara deletes them permanently and warns you first.
 </details>
 
 <details>
@@ -205,7 +241,7 @@ node --test omarchy/tests/*.test.mjs   # bar widget tests (from the repo root)
 - **Bhandara Bar**: the Omarchy bar widget.
 - **Bhandara Darshana** (दर्शन, "view"): the storage dashboard app.
 - **Bhandara Swasthya** (स्वास्थ्य, "health"): drive health from SMART data. *Next release.*
-- **Bhandara Suchi** (सूची, "index"): a file index, stats and safe file operations. *Planned.*
+- **Bhandara Suchi** (सूची, "index"): the Files view: a file index, stats and safe deleting. *Next release.*
 
 </details>
 

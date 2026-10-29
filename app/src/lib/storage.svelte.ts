@@ -1,21 +1,19 @@
-import { ACCESS_NEEDED, api, type FolderUsage, type HealthStatus, type ScanProgress, type Volume } from './api'
+import { api, type HealthStatus, type Volume } from './api'
 
-const HISTORY = 60
+/** Two minutes of one-second samples. */
+const HISTORY = 120
+/** Share of each new sample in the smoothed rate: lower is calmer. */
+const SMOOTHING = 0.3
 
 /** Live storage state, polled while any view is mounted. */
 export class Storage {
   volumes = $state<Volume[]>([])
-  folders = $state<FolderUsage>({ total: 0, folders: [] })
   readHistory = $state<number[]>([])
   writeHistory = $state<number[]>([])
   read = $state(0)
   write = $state(0)
   /** False when the platform exposes no throughput counters. */
   hasThroughput = $state(true)
-  scanning = $state(false)
-  scanProgress = $state<ScanProgress>({ done: 0, total: 0 })
-  /** Android: folders cannot be measured until all-files access is granted. */
-  needsAccess = $state(false)
   error = $state('')
   ejecting = $state('')
   health = $state<HealthStatus | null>(null)
@@ -33,29 +31,17 @@ export class Storage {
     }
   }
 
-  async refreshFolders(force = false) {
-    if (this.scanning) return
-    this.scanning = true
-    this.scanProgress = { done: 0, total: 0 }
-    try {
-      this.folders = await api.largestFolders(force)
-      this.needsAccess = false
-    } catch (e) {
-      if (e === ACCESS_NEEDED) this.needsAccess = true
-      else this.error = String(e)
-    } finally {
-      this.scanning = false
-    }
-  }
-
   async sampleThroughput() {
     const rates = await api.throughput().catch(() => null)
     this.hasThroughput = rates !== null
     if (!rates) return
-    this.read = rates.read
-    this.write = rates.write
-    this.readHistory = [...this.readHistory, rates.read].slice(-HISTORY)
-    this.writeHistory = [...this.writeHistory, rates.write].slice(-HISTORY)
+    // Disk counters jump from one second to the next; an exponential
+    // moving average turns that into a readable trend.
+    const first = this.readHistory.length === 0
+    this.read = first ? rates.read : this.read + SMOOTHING * (rates.read - this.read)
+    this.write = first ? rates.write : this.write + SMOOTHING * (rates.write - this.write)
+    this.readHistory = [...this.readHistory, this.read].slice(-HISTORY)
+    this.writeHistory = [...this.writeHistory, this.write].slice(-HISTORY)
   }
 
   async eject(volume: Volume) {
@@ -87,35 +73,17 @@ export class Storage {
     }
   }
 
-  requestAccess() {
-    api.requestStorageAccess().catch((e) => (this.error = String(e)))
-  }
-
-  open(path: string) {
-    api.openPath(path).catch((e) => (this.error = String(e)))
-  }
-
   /** Starts polling; returns a function that stops it. */
   start(): () => void {
     this.refreshVolumes().then(() => this.sampleThroughput())
-    this.refreshFolders()
     this.refreshHealth()
     const timers = [
       setInterval(() => this.refreshHealth(), 60_000),
       setInterval(() => this.sampleThroughput(), 1000),
       setInterval(() => this.refreshVolumes(), 5000),
-      setInterval(() => this.refreshFolders(), 60_000),
     ]
-    const unlisten = api.onScanProgress((progress) => (this.scanProgress = progress))
-    // Coming back from Android's access settings screen: check again.
-    const onVisible = () => {
-      if (document.visibilityState === 'visible' && this.needsAccess) this.refreshFolders(true)
-    }
-    document.addEventListener('visibilitychange', onVisible)
     return () => {
       timers.forEach(clearInterval)
-      unlisten.then((stop) => stop())
-      document.removeEventListener('visibilitychange', onVisible)
     }
   }
 }
