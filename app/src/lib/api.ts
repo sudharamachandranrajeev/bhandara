@@ -45,6 +45,37 @@ export interface ScanProgress {
   total: number
 }
 
+export type Verdict = 'good' | 'watch' | 'replace'
+
+export interface DriveHealth {
+  device: string
+  model: string
+  serial: string
+  protocol: string
+  rotational: boolean
+  verdict: Verdict
+  reasons: string[]
+  temperature: number | null
+  powerOnHours: number | null
+  /** Percent of rated life used. */
+  wear: number | null
+  /** Bytes written over the drive's life. */
+  written: number | null
+}
+
+export interface HealthReport {
+  /** Unix seconds. */
+  generated: number
+  drives: DriveHealth[]
+  errors: string[]
+}
+
+export interface HealthStatus {
+  state: 'ok' | 'stale' | 'missing' | 'unsupported'
+  report: HealthReport | null
+  canInstall: boolean
+}
+
 /** `largestFolders` rejects with this when Android all-files access is missing. */
 export const ACCESS_NEEDED = 'ACCESS_NEEDED'
 
@@ -61,4 +92,6 @@ export const api = {
     listen<ScanProgress>('folders-progress', (event) => handler(event.payload)),
   openPath: (path: string) => invoke<void>('open_path', { path }),
   eject: (mount: string) => invoke<void>('eject', { mount }),
+  health: () => invoke<HealthStatus>('health'),
+  installHealth: () => invoke<void>('install_health'),
 }

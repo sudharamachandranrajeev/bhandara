@@ -323,3 +323,44 @@ function findVolume(volumes, mount) {
   }
   return volumes.length > 0 ? volumes[0] : null
 }
+
+// ---------- Drive health ----------
+// The bhandara-health helper (packaging/linux) writes this report as root.
+
+var HEALTH_PATH = "/run/bhandara/health.json"
+var HEALTH_STALE_SECONDS = 2 * 60 * 60
+var VERDICT_RANK = { good: 0, watch: 1, replace: 2 }
+var VERDICT_LABEL = { good: "Good", watch: "Watch", replace: "Replace" }
+
+// `worst` is "" when there is no fresh report, so health never colours the
+// bar on a guess.
+function parseHealth(text, nowSeconds) {
+  var report
+  try {
+    report = JSON.parse(text)
+  } catch (e) {
+    return { worst: "", stale: false, drives: [] }
+  }
+  var stale = nowSeconds - (report.generated || 0) > HEALTH_STALE_SECONDS
+  var drives = (report.drives || []).map(function(d) {
+    return { name: d.model || d.device, verdict: d.verdict, reason: (d.reasons || [])[0] || "" }
+  })
+  var worst = ""
+  if (!stale) {
+    drives.forEach(function(d) {
+      if (worst === "" || VERDICT_RANK[d.verdict] > VERDICT_RANK[worst]) worst = d.verdict
+    })
+  }
+  return { worst: worst, stale: stale, drives: drives }
+}
+
+// Usage sets the level; a drive health problem can only raise it.
+function combinedLevel(usage, worst) {
+  if (worst === "replace") return "critical"
+  if (worst === "watch" && usage === "normal") return "warning"
+  return usage
+}
+
+function verdictLevel(verdict) {
+  return combinedLevel("normal", verdict)
+}

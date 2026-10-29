@@ -1,8 +1,10 @@
 //! Storage data shared by every Bhandara front end: mounted volumes, live
-//! disk throughput, the largest folders under a directory, and eject.
+//! disk throughput, the largest folders under a directory, eject, and drive
+//! health.
 
 mod eject;
 mod folders;
+pub mod health;
 mod throughput;
 mod volumes;
 

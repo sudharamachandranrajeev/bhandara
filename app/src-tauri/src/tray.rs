@@ -1,6 +1,9 @@
 //! Tray icon with a live usage ring and a quick-view flyout window. On by
 //! default on Windows; elsewhere set BHANDARA_TRAY=1 (Omarchy has its bar).
+//! The ring's colour is the worse of system-drive usage and drive health.
 
+use crate::health;
+use bhandara_core::health::Verdict;
 use bhandara_core::{Kind, Level, Volume};
 use std::time::Duration;
 use tauri::image::Image;
@@ -10,7 +13,7 @@ use tauri::{App, AppHandle, Manager, PhysicalPosition, Rect, WebviewUrl, Webview
 
 const TRAY_ID: &str = "bhandara";
 const FLYOUT: &str = "flyout";
-const FLYOUT_SIZE: (f64, f64) = (360.0, 520.0);
+const FLYOUT_SIZE: (f64, f64) = (360.0, 600.0);
 const ICON_SIZE: u32 = 32;
 const REFRESH: Duration = Duration::from_secs(60);
 
@@ -51,10 +54,10 @@ pub fn setup(app: &App) -> tauri::Result<()> {
 
     let open = MenuItem::with_id(app, "open", "Open Bhandara", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let summary = system_summary();
+    let (summary, drives) = (system_summary(), health::worst());
     TrayIconBuilder::with_id(TRAY_ID)
-        .icon(ring_icon(summary.as_ref()))
-        .tooltip(tooltip(summary.as_ref()))
+        .icon(ring_icon(summary.as_ref(), drives))
+        .tooltip(tooltip(summary.as_ref(), drives))
         .menu(&Menu::with_items(app, &[&open, &quit])?)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
@@ -72,10 +75,10 @@ pub fn setup(app: &App) -> tauri::Result<()> {
     let app = app.handle().clone();
     std::thread::spawn(move || loop {
         std::thread::sleep(REFRESH);
-        let summary = system_summary();
+        let (summary, drives) = (system_summary(), health::worst());
         if let Some(tray) = app.tray_by_id(TRAY_ID) {
-            let _ = tray.set_icon(Some(ring_icon(summary.as_ref())));
-            let _ = tray.set_tooltip(Some(tooltip(summary.as_ref())));
+            let _ = tray.set_icon(Some(ring_icon(summary.as_ref(), drives)));
+            let _ = tray.set_tooltip(Some(tooltip(summary.as_ref(), drives)));
         }
     });
     Ok(())
@@ -139,17 +142,32 @@ fn format_bytes(bytes: u64) -> String {
     if unit == 0 || value >= 10.0 { format!("{} {}", value.round(), units[unit]) } else { format!("{value:.1} {}", units[unit]) }
 }
 
-fn tooltip(volume: Option<&Volume>) -> String {
-    match volume {
+fn tooltip(volume: Option<&Volume>, drives: Option<Verdict>) -> String {
+    let usage = match volume {
         Some(v) => format!("{} · {} free of {}", v.name, format_bytes(v.avail), format_bytes(v.used + v.avail)),
         None => "Bhandara".into(),
+    };
+    match drives {
+        Some(Verdict::Watch) => format!("{usage}\nA drive needs watching"),
+        Some(Verdict::Replace) => format!("{usage}\nA drive should be replaced"),
+        _ => usage,
+    }
+}
+
+/// Usage colours the ring; a drive health problem can only make it worse.
+fn icon_level(volume: Option<&Volume>, drives: Option<Verdict>) -> Level {
+    let usage = volume.map_or(Level::Normal, |v| v.level);
+    match drives {
+        Some(Verdict::Replace) => Level::Critical,
+        Some(Verdict::Watch) if usage == Level::Normal => Level::Warning,
+        _ => usage,
     }
 }
 
 /// Anti-aliased usage ring drawn clockwise from twelve o'clock.
-fn ring_icon(volume: Option<&Volume>) -> Image<'static> {
+fn ring_icon(volume: Option<&Volume>, drives: Option<Verdict>) -> Image<'static> {
     let fraction = volume.map_or(0.0, |v| v.fraction.clamp(0.0, 1.0));
-    let fill: [u8; 3] = match volume.map_or(Level::Normal, |v| v.level) {
+    let fill: [u8; 3] = match icon_level(volume, drives) {
         Level::Normal => [122, 162, 247],
         Level::Warning => [224, 175, 104],
         Level::Critical => [247, 118, 142],
@@ -186,7 +204,7 @@ mod tests {
     #[test]
     fn ring_fills_clockwise_from_top() {
         let volume = Volume { fraction: 0.25, level: Level::Normal, ..sample() };
-        let image = ring_icon(Some(&volume));
+        let image = ring_icon(Some(&volume), None);
         let pixel = |x: u32, y: u32| {
             let i = ((y * ICON_SIZE + x) * 4) as usize;
             &image.rgba()[i..i + 4]
@@ -196,6 +214,18 @@ mod tests {
         assert_eq!(&pixel(9, 27)[..3], &[200, 200, 210]);
         // The hole in the middle is transparent.
         assert_eq!(pixel(16, 16)[3], 0);
+    }
+
+    #[test]
+    fn health_can_only_raise_the_colour() {
+        let normal = Volume { level: Level::Normal, ..sample() };
+        let critical = Volume { level: Level::Critical, ..sample() };
+        assert_eq!(icon_level(Some(&normal), None), Level::Normal);
+        assert_eq!(icon_level(Some(&normal), Some(Verdict::Good)), Level::Normal);
+        assert_eq!(icon_level(Some(&normal), Some(Verdict::Watch)), Level::Warning);
+        assert_eq!(icon_level(Some(&normal), Some(Verdict::Replace)), Level::Critical);
+        assert_eq!(icon_level(Some(&critical), Some(Verdict::Watch)), Level::Critical);
+        assert!(tooltip(Some(&normal), Some(Verdict::Replace)).ends_with("\nA drive should be replaced"));
     }
 
     fn sample() -> Volume {

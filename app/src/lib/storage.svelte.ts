@@ -1,4 +1,4 @@
-import { ACCESS_NEEDED, api, type FolderUsage, type ScanProgress, type Volume } from './api'
+import { ACCESS_NEEDED, api, type FolderUsage, type HealthStatus, type ScanProgress, type Volume } from './api'
 
 const HISTORY = 60
 
@@ -18,6 +18,8 @@ export class Storage {
   needsAccess = $state(false)
   error = $state('')
   ejecting = $state('')
+  health = $state<HealthStatus | null>(null)
+  installingHealth = $state(false)
 
   system = $derived(this.volumes.find((v) => v.kind === 'system') ?? this.volumes[0])
   busy = $derived(this.read + this.write > 256 * 1024)
@@ -68,6 +70,23 @@ export class Storage {
     }
   }
 
+  async refreshHealth() {
+    this.health = await api.health().catch(() => null)
+  }
+
+  async installHealth() {
+    this.installingHealth = true
+    try {
+      await api.installHealth()
+      // The helper's first run takes a few seconds.
+      setTimeout(() => this.refreshHealth(), 5000)
+    } catch (e) {
+      this.error = String(e)
+    } finally {
+      this.installingHealth = false
+    }
+  }
+
   requestAccess() {
     api.requestStorageAccess().catch((e) => (this.error = String(e)))
   }
@@ -80,7 +99,9 @@ export class Storage {
   start(): () => void {
     this.refreshVolumes().then(() => this.sampleThroughput())
     this.refreshFolders()
+    this.refreshHealth()
     const timers = [
+      setInterval(() => this.refreshHealth(), 60_000),
       setInterval(() => this.sampleThroughput(), 1000),
       setInterval(() => this.refreshVolumes(), 5000),
       setInterval(() => this.refreshFolders(), 60_000),

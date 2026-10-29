@@ -1,0 +1,20 @@
+{
+  "json_format_version": [1, 0],
+  "smartctl": { "version": [7, 5], "exit_status": 0 },
+  "device": { "name": "/dev/nvme1", "info_name": "/dev/nvme1", "type": "nvme", "protocol": "NVMe" },
+  "model_name": "Example NVMe SSD 1TB",
+  "serial_number": "TEST-NVME-0002",
+  "smart_status": { "passed": true, "nvme": { "value": 1 } },
+  "nvme_smart_health_information_log": {
+    "critical_warning": 1,
+    "temperature": 48,
+    "available_spare": 8,
+    "available_spare_threshold": 10,
+    "percentage_used": 97,
+    "data_units_written": 900000000,
+    "power_on_hours": 21000,
+    "media_errors": 12
+  },
+  "temperature": { "current": 48 },
+  "power_on_time": { "hours": 21000 }
+}

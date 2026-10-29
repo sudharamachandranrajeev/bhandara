@@ -7,7 +7,7 @@ import "Model.js" as Model
 
 // Storage bar widget: a usage ring (plus optional label) in the bar, and a
 // panel with every mounted volume, live disk throughput, and the largest
-// folders in $HOME.
+// folders in $HOME, plus drive health when the bhandara-health helper runs.
 Panel {
   id: root
   moduleName: "bhandara.bar"
@@ -32,8 +32,10 @@ Panel {
   property var homeUsage: ({ total: 0, folders: [] })
   property real homeScannedAt: 0
   property int cursorIndex: -1
+  property var health: ({ worst: "", stale: false, drives: [] })
 
   readonly property var barVolume: Model.findVolume(volumes, barMount)
+  readonly property string barLevel: Model.combinedLevel(barVolume ? barVolume.level : "normal", health.worst)
   readonly property bool busy: totalRead + totalWrite > 256 * 1024
   readonly property int rowCount: volumes.length + homeUsage.folders.length
 
@@ -144,6 +146,7 @@ Panel {
   Component.onCompleted: {
     refreshVolumes()
     statsProc.running = true
+    healthProc.running = true
   }
 
   Process {
@@ -158,6 +161,16 @@ Panel {
     id: statsProc
     command: ["cat", "/proc/diskstats"]
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.applyDiskstats(text) }
+  }
+
+  // A missing file (helper not installed) prints nothing and leaves health empty.
+  Process {
+    id: healthProc
+    command: ["cat", Model.HEALTH_PATH]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.health = Model.parseHealth(text, Date.now() / 1000)
+    }
   }
 
   Process {
@@ -203,6 +216,13 @@ Panel {
     onTriggered: root.refreshVolumes()
   }
 
+  Timer {
+    interval: root.opened ? 60000 : 5 * 60000
+    running: true
+    repeat: true
+    onTriggered: if (!healthProc.running) healthProc.running = true
+  }
+
   // ---------- Bar button ----------
 
   Row {
@@ -213,6 +233,8 @@ Panel {
     readonly property string tooltip: root.barVolume
       ? root.barVolume.name + " · " + Model.formatBytes(root.barVolume.avail) + " free of "
         + Model.formatBytes(root.barVolume.used + root.barVolume.avail)
+        + (root.health.worst === "watch" ? "\nA drive needs watching"
+          : root.health.worst === "replace" ? "\nA drive should be replaced" : "")
       : "Storage"
 
     function press(b) {
@@ -234,7 +256,7 @@ Panel {
           anchors.margins: 1
           lineWidth: Math.max(2, Style.space(2.2))
           fraction: root.barVolume ? root.barVolume.fraction : 0
-          color: root.barRingColor(root.barVolume ? root.barVolume.level : "normal")
+          color: root.barRingColor(root.barLevel)
           trackColor: Util.alpha(root.bar ? root.bar.barForeground : Color.foreground, 0.22)
         }
 

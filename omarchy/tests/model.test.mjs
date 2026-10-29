@@ -96,3 +96,30 @@ test("bar label cycles used, free, none", () => {
   assert.equal(Model.barLabel(volume, "free"), "8.6G")
   assert.equal(Model.barLabel(volume, "none"), "")
 })
+
+test("parseHealth picks the worst fresh verdict", () => {
+  const report = JSON.stringify({
+    generated: 1000,
+    drives: [
+      { device: "/dev/nvme0", model: "Example NVMe", verdict: "good", reasons: [] },
+      { device: "/dev/sda", model: "", verdict: "watch", reasons: ["Pending sectors: 8"] },
+    ],
+    errors: [],
+  })
+  const fresh = plain(Model.parseHealth(report, 1000 + 60))
+  assert.equal(fresh.worst, "watch")
+  assert.equal(fresh.stale, false)
+  assert.deepEqual(fresh.drives[1], { name: "/dev/sda", verdict: "watch", reason: "Pending sectors: 8" })
+
+  const stale = plain(Model.parseHealth(report, 1000 + 3 * 60 * 60))
+  assert.equal(stale.worst, "")
+  assert.equal(stale.stale, true)
+  assert.equal(Model.parseHealth("", 0).worst, "")
+})
+
+test("combinedLevel lets health only raise the level", () => {
+  assert.equal(Model.combinedLevel("normal", ""), "normal")
+  assert.equal(Model.combinedLevel("normal", "watch"), "warning")
+  assert.equal(Model.combinedLevel("critical", "watch"), "critical")
+  assert.equal(Model.combinedLevel("warning", "replace"), "critical")
+})

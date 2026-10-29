@@ -3,8 +3,9 @@ import qs.Commons
 import qs.Ui
 import "Model.js" as Model
 
-// Body of the storage panel: hero gauge, live throughput, volumes, and the
-// largest folders in $HOME. All data comes from the owning Panel.
+// Body of the storage panel: hero gauge, live throughput, volumes, drive
+// health, and the largest folders in $HOME. All data comes from the owning
+// Panel.
 Column {
   id: root
 
@@ -96,6 +97,66 @@ Column {
         volume: modelData
         hasCursor: root.panel.cursorIndex === index
         onHoveredChanged: if (hovered) root.panel.cursorIndex = index
+      }
+    }
+  }
+
+  PanelSeparator {
+    foreground: root.fg
+    visible: root.panel.health.drives.length > 0
+  }
+
+  // ---------- Drive health ----------
+  Column {
+    width: parent.width
+    spacing: Style.space(4)
+    visible: root.panel.health.drives.length > 0
+
+    PanelSectionHeader {
+      text: root.panel.health.stale ? "DRIVE HEALTH · OUT OF DATE" : "DRIVE HEALTH"
+      foreground: root.fg
+      fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
+    }
+
+    Repeater {
+      model: root.panel.health.drives
+
+      Column {
+        required property var modelData
+        width: parent.width
+        spacing: Style.space(1)
+
+        Row {
+          width: parent.width
+          spacing: Style.space(8)
+
+          Text {
+            width: parent.width - verdictText.width - parent.spacing
+            textFormat: Text.PlainText
+            text: modelData.name
+            elide: Text.ElideRight
+            color: root.fg
+            font.family: root.bar ? root.bar.fontFamily : Style.font.family
+            font.pixelSize: Style.font.body
+          }
+
+          Text {
+            id: verdictText
+            textFormat: Text.PlainText
+            text: Model.VERDICT_LABEL[modelData.verdict] || modelData.verdict
+            color: root.panel.levelColor(Model.verdictLevel(modelData.verdict))
+            font.family: root.bar ? root.bar.fontFamily : Style.font.family
+            font.pixelSize: Style.font.body
+            font.bold: true
+          }
+        }
+
+        Body {
+          width: parent.width
+          visible: modelData.reason !== ""
+          text: modelData.reason
+          color: root.dim
+        }
       }
     }
   }

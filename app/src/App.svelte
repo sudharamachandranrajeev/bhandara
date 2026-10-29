@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getCurrentWindow, Window } from '@tauri-apps/api/window'
   import Folders from './lib/Folders.svelte'
+  import Health from './lib/Health.svelte'
   import Ring from './lib/Ring.svelte'
   import Throughput from './lib/Throughput.svelte'
   import VolumeRow from './lib/VolumeRow.svelte'
@@ -52,6 +53,7 @@
     </section>
 
     <div class="side">
+      <Health {storage} compact={flyout} />
       <Throughput {storage} height={flyout ? 40 : 72} />
       {#if !flyout}<Folders {storage} />{/if}
     </div>

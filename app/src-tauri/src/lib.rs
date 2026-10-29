@@ -9,6 +9,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_storage_access::StorageAccessExt;
 
+mod health;
 #[cfg(desktop)]
 mod tray;
 
@@ -121,16 +122,37 @@ async fn eject(storage: State<'_, Storage>, mount: String) -> CommandResult<()> 
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn health() -> health::HealthStatus {
+    tauri::async_runtime::spawn_blocking(health::status).await.unwrap_or(health::HealthStatus {
+        state: health::State::Missing,
+        report: None,
+        can_install: false,
+    })
+}
+
+/// Windows: one UAC prompt to schedule the health helper.
+#[tauri::command]
+async fn install_health() -> CommandResult<()> {
+    tauri::async_runtime::spawn_blocking(health::install).await.map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_notification::init());
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_storage_access::init())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![volumes, throughput, largest_folders, request_storage_access, open_path, eject])
+        .invoke_handler(tauri::generate_handler![volumes, throughput, largest_folders, request_storage_access, open_path, eject, health, install_health])
         .setup(|_app| {
             #[cfg(desktop)]
-            tray::setup(_app)?;
+            {
+                tray::setup(_app)?;
+                health::watch(_app.handle().clone());
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

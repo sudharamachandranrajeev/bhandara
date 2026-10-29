@@ -1,0 +1,20 @@
+[Unit]
+Description=Bhandara drive health report
+Documentation=https://github.com/sudharamachandranrajeev/bhandara
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bhandara-health
+# Writes /run/bhandara/health.json, root-owned and readable by everyone.
+RuntimeDirectory=bhandara
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+UMask=0022
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
