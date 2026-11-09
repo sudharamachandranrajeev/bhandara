@@ -2,7 +2,6 @@
 //! never by deleting its folder; commands that need root are only shown.
 
 use serde::Serialize;
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -212,7 +211,7 @@ fn find_program(name: &str) -> Option<PathBuf> {
 #[cfg(unix)]
 fn is_executable(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
-    fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
 }
 
 #[cfg(not(unix))]
