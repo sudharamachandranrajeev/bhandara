@@ -173,6 +173,120 @@ export const api = {
   exclusions: () => invoke<string[]>('exclusions'),
   exclude: (id: number) => invoke<string[]>('exclude', { id }),
   include: (path: string) => invoke<string[]>('include', { path }),
-  onProgress: (event: 'scan-progress' | 'duplicates-progress', handler: (progress: Progress) => void): Promise<UnlistenFn> =>
+  onProgress: (event: 'scan-progress' | 'duplicates-progress' | 'clean-progress', handler: (progress: Progress) => void): Promise<UnlistenFn> =>
     listen<Progress>(event, (e) => handler(e.payload)),
+  cleanRules: () => invoke<RuleInfo[]>('clean_rules'),
+  cleanScan: (root: string) => invoke<CleanScan>('clean_scan', { root }),
+  cleanStop: () => invoke<void>('clean_stop'),
+  cleanRemove: (ids: number[], mode: CleanMode) => invoke<RemoveResult>('clean_remove', { ids, mode }),
+  cacheList: () => invoke<Cache[]>('cache_list'),
+  cacheRun: (id: string) => invoke<string>('cache_run', { id }),
+  receipts: (limit: number) => invoke<Receipt[]>('receipts', { limit }),
+  watchSettings: () => invoke<WatchSettings>('watch_settings'),
+  saveWatchSettings: (settings: WatchSettings) => invoke<WatchSettings>('save_watch_settings', { settings }),
+  watchStatus: () => invoke<WatchStatus>('watch_status'),
+  growth: (days: number) => invoke<Growth>('growth', { days }),
+  takeSample: () => invoke<void>('take_sample'),
+  openSystemCleanup: (tool: 'storage-sense' | 'disk-cleanup') => invoke<void>('open_system_cleanup', { tool }),
+}
+
+// ---------------------------------------------------------------- Shodhana
+
+export type Rule = 'cargo' | 'flutter' | 'node' | 'gradle' | 'python-venv' | 'py-cache' | 'cache-tag'
+export type CleanMode = 'trash' | 'permanent'
+
+export interface RuleInfo {
+  rule: Rule
+  label: string
+  whySafe: string
+  comesBack: string
+}
+
+export type Skip =
+  | { reason: 'active'; days: number }
+  | { reason: 'gitTracked' }
+  | { reason: 'running' }
+  | { reason: 'synced'; folder: string }
+  | { reason: 'mountPoint' }
+
+export interface Candidate {
+  id: number
+  path: string
+  project: string
+  rule: Rule
+  bytes: number
+  files: number
+  projectChanged: number
+  skip: Skip | null
+  releases: string[]
+}
+
+export interface CleanScan {
+  root: string
+  candidates: Candidate[]
+  partial: boolean
+  reclaimable: number
+  scannedAt: number
+}
+
+export interface Receipt {
+  at: number
+  path: string
+  rule: Rule
+  bytes: number
+  mode: CleanMode
+  backedUp: string[]
+  scheduled: boolean
+}
+
+export interface SnapshotNotice {
+  mount: string
+  removed: number
+  freed: number
+  snapshots: number | null
+  commands: string[]
+}
+
+export interface RemoveResult {
+  receipts: Receipt[]
+  failed: [string, string][]
+  snapshot: SnapshotNotice | null
+}
+
+export interface Cache {
+  id: string
+  label: string
+  note: string
+  command: string
+  bytes: number | null
+  runnable: boolean
+  root: boolean
+}
+
+export interface WatchSettings {
+  lowPercent: number
+  lowGb: number
+  criticalPercent: number
+  muted: string[]
+  snoozed: Record<string, number>
+  schedule: { enabled: boolean; mode: CleanMode; days: number; roots: string[] }
+  activeDays: number
+  backupReleases: boolean
+}
+
+export type SpaceLevel = 'ok' | 'low' | 'critical'
+
+export interface WatchStatus {
+  levels: Record<string, SpaceLevel>
+  lastSample: number
+  samples: number
+  /** Linux: the bhandara-watch user timer is active. null where the app runs the watch. */
+  timer: boolean | null
+}
+
+export interface Growth {
+  since: number
+  until: number
+  volumes: { mount: string; name: string; used: number; delta: number }[]
+  folders: { path: string; bytes: number; delta: number }[]
 }

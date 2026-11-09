@@ -33,6 +33,7 @@ Panel {
   property real homeScannedAt: 0
   property int cursorIndex: -1
   property var health: ({ worst: "", stale: false, drives: [] })
+  property var reclaimable: null
 
   readonly property var barVolume: Model.findVolume(volumes, barMount)
   readonly property string barLevel: Model.combinedLevel(barVolume ? barVolume.level : "normal", health.worst)
@@ -147,6 +148,7 @@ Panel {
     refreshVolumes()
     statsProc.running = true
     healthProc.running = true
+    watchProc.running = true
   }
 
   Process {
@@ -170,6 +172,16 @@ Panel {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.health = Model.parseHealth(text, Date.now() / 1000)
+    }
+  }
+
+  // Written by bhandara-watch or the app; missing until either has searched.
+  Process {
+    id: watchProc
+    command: ["sh", "-c", Model.WATCH_STATE_COMMAND]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.reclaimable = Model.parseReclaimable(text)
     }
   }
 
@@ -220,7 +232,10 @@ Panel {
     interval: root.opened ? 60000 : 5 * 60000
     running: true
     repeat: true
-    onTriggered: if (!healthProc.running) healthProc.running = true
+    onTriggered: {
+      if (!healthProc.running) healthProc.running = true
+      if (!watchProc.running) watchProc.running = true
+    }
   }
 
   // ---------- Bar button ----------

@@ -458,6 +458,23 @@ impl Index {
         }
     }
 
+    /// The `limit` biggest folders (space on disk) at most `depth` levels
+    /// below the root, for growth history.
+    pub fn largest_folders(&self, depth: usize, limit: usize) -> Vec<(PathBuf, u64)> {
+        let mut found = Vec::new();
+        let mut stack: Vec<(Id, usize)> = self.tree.dirs[0].children.iter().map(|&c| (c, 1)).collect();
+        while let Some((id, level)) = stack.pop() {
+            let d = &self.tree.dirs[id as usize];
+            found.push((id, d.total.alloc));
+            if level < depth {
+                stack.extend(d.children.iter().map(|&c| (c, level + 1)));
+            }
+        }
+        found.sort_by_key(|&(_, alloc)| std::cmp::Reverse(alloc));
+        found.truncate(limit);
+        found.into_iter().filter_map(|(id, alloc)| Some((self.path(Item::Dir(id))?, alloc))).collect()
+    }
+
     /// True while the item is still in the tree (not deleted or replaced by
     /// a rescan).
     pub fn is_live(&self, item: Item) -> bool {
@@ -774,18 +791,18 @@ fn display_name(path: &Path) -> String {
 }
 
 #[cfg(unix)]
-fn inode(meta: &Metadata) -> Option<(u64, u64)> {
+pub(crate) fn inode(meta: &Metadata) -> Option<(u64, u64)> {
     use std::os::unix::fs::MetadataExt;
     (meta.nlink() > 1).then(|| (meta.dev(), meta.ino()))
 }
 
 #[cfg(not(unix))]
-fn inode(_meta: &Metadata) -> Option<(u64, u64)> {
+pub(crate) fn inode(_meta: &Metadata) -> Option<(u64, u64)> {
     None
 }
 
 #[cfg(unix)]
-fn allocated(meta: &Metadata) -> u64 {
+pub(crate) fn allocated(meta: &Metadata) -> u64 {
     use std::os::unix::fs::MetadataExt;
     meta.blocks() * 512
 }
@@ -793,7 +810,7 @@ fn allocated(meta: &Metadata) -> u64 {
 /// Windows: OneDrive and other cloud-only placeholders use no local space;
 /// everything else is rounded up to a 4 KB cluster.
 #[cfg(windows)]
-fn allocated(meta: &Metadata) -> u64 {
+pub(crate) fn allocated(meta: &Metadata) -> u64 {
     use std::os::windows::fs::MetadataExt;
     const OFFLINE: u32 = 0x1000;
     const RECALL_ON_OPEN: u32 = 0x4_0000;
@@ -806,11 +823,11 @@ fn allocated(meta: &Metadata) -> u64 {
 }
 
 #[cfg(not(any(unix, windows)))]
-fn allocated(meta: &Metadata) -> u64 {
+pub(crate) fn allocated(meta: &Metadata) -> u64 {
     meta.len()
 }
 
-fn modified(meta: &Metadata) -> i64 {
+pub(crate) fn modified(meta: &Metadata) -> i64 {
     meta.modified()
         .ok()
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
@@ -819,17 +836,17 @@ fn modified(meta: &Metadata) -> i64 {
 
 /// Windows junctions and mounted folders: not followed, like symlinks.
 #[cfg(windows)]
-fn is_reparse_point(meta: &Metadata) -> bool {
+pub(crate) fn is_reparse_point(meta: &Metadata) -> bool {
     use std::os::windows::fs::MetadataExt;
     meta.file_attributes() & 0x400 != 0
 }
 
 #[cfg(not(windows))]
-fn is_reparse_point(_meta: &Metadata) -> bool {
+pub(crate) fn is_reparse_point(_meta: &Metadata) -> bool {
     false
 }
 
-enum MountKind {
+pub(crate) enum MountKind {
     None,
     /// Another mount of the root's filesystem, such as a btrfs subvolume:
     /// entered, because it holds the same disk's data.
@@ -841,13 +858,13 @@ enum MountKind {
 /// Mount points and their sources, from /proc/self/mountinfo. Empty
 /// elsewhere, where reparse points mark mounts instead.
 #[derive(Default)]
-struct Mounts {
+pub(crate) struct Mounts {
     points: HashMap<PathBuf, String>,
     root_source: String,
 }
 
 impl Mounts {
-    fn load(root: &Path) -> Self {
+    pub(crate) fn load(root: &Path) -> Self {
         let text = if cfg!(any(target_os = "linux", target_os = "android")) {
             fs::read_to_string("/proc/self/mountinfo").unwrap_or_default()
         } else {
@@ -875,7 +892,12 @@ impl Mounts {
         Mounts { points, root_source }
     }
 
-    fn classify(&self, path: &Path) -> MountKind {
+    /// True when `path` is any mount point.
+    pub(crate) fn is_mount(&self, path: &Path) -> bool {
+        self.points.contains_key(path)
+    }
+
+    pub(crate) fn classify(&self, path: &Path) -> MountKind {
         match self.points.get(path) {
             None => MountKind::None,
             Some(source) if *source == self.root_source && !source.is_empty() => MountKind::SameFilesystem,

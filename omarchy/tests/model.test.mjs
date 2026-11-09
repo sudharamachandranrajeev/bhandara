@@ -123,3 +123,11 @@ test("combinedLevel lets health only raise the level", () => {
   assert.equal(Model.combinedLevel("critical", "watch"), "critical")
   assert.equal(Model.combinedLevel("warning", "replace"), "critical")
 })
+
+test("parseReclaimable shows only a worthwhile amount", () => {
+  const state = bytes => JSON.stringify({ levels: {}, reclaimable: { bytes, root: "/home/u", at: 5 } })
+  assert.deepEqual(plain(Model.parseReclaimable(state(2.5e9))), { bytes: 2.5e9, root: "/home/u", at: 5 })
+  assert.equal(Model.parseReclaimable(state(4e8)), null)
+  assert.equal(Model.parseReclaimable(JSON.stringify({ levels: {} })), null)
+  assert.equal(Model.parseReclaimable(""), null)
+})

@@ -1,0 +1,10 @@
+[Unit]
+Description=Bhandara space watch: low-space alerts, daily history, scheduled clean
+Documentation=https://github.com/sudharamachandranrajeev/bhandara
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/bhandara-watch
+# The daily sample reads every folder in home; keep it out of the way.
+Nice=19
+IOSchedulingClass=idle

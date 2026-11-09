@@ -163,7 +163,33 @@ Column {
 
   PanelSeparator {
     foreground: root.fg
-    visible: root.panel.homeUsage.folders.length > 0
+    visible: root.panel.homeUsage.folders.length > 0 || root.panel.reclaimable !== null
+  }
+
+  // ---------- Cleanable build output ----------
+  Column {
+    width: parent.width
+    spacing: Style.space(4)
+    visible: root.panel.reclaimable !== null
+
+    PanelSectionHeader {
+      text: "CLEANABLE"
+      foreground: root.fg
+      fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
+    }
+
+    Body {
+      width: parent.width
+      text: root.panel.reclaimable
+        ? Model.formatBytes(root.panel.reclaimable.bytes) + " of build output can be removed. Open Bhandara, then Clean."
+        : ""
+      color: root.dim
+    }
+  }
+
+  PanelSeparator {
+    foreground: root.fg
+    visible: root.panel.reclaimable !== null && root.panel.homeUsage.folders.length > 0
   }
 
   // ---------- Largest folders in $HOME ----------

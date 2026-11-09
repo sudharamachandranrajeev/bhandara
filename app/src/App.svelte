@@ -1,11 +1,13 @@
 <script lang="ts">
   import { getCurrentWindow, Window } from '@tauri-apps/api/window'
+  import CleanView from './lib/CleanView.svelte'
   import FilesView from './lib/FilesView.svelte'
   import Health from './lib/Health.svelte'
   import Ring from './lib/Ring.svelte'
   import Throughput from './lib/Throughput.svelte'
   import TopFolders from './lib/TopFolders.svelte'
   import VolumeRow from './lib/VolumeRow.svelte'
+  import WatchView from './lib/WatchView.svelte'
   import { Files } from './lib/files.svelte'
   import { Storage } from './lib/storage.svelte'
   import { formatBytes, percent } from './lib/format'
@@ -18,7 +20,7 @@
 
   // Only the dashboard indexes files; the flyout stays light.
   const files = flyout ? null : new Files()
-  let view = $state<'overview' | 'files'>('overview')
+  let view = $state<'overview' | 'files' | 'clean' | 'watch'>('overview')
 
   $effect(() => files?.start())
 
@@ -42,11 +44,17 @@
     <nav class="views" aria-label="Views">
       <button class:on={view === 'overview'} onclick={() => (view = 'overview')}>Overview</button>
       <button class:on={view === 'files'} onclick={() => browse()}>Files</button>
+      <button class:on={view === 'clean'} onclick={() => (view = 'clean')}>Clean</button>
+      <button class:on={view === 'watch'} onclick={() => (view = 'watch')}>Watch</button>
     </nav>
   {/if}
 
   {#if files && view === 'files'}
     <FilesView {files} />
+  {:else if files && view === 'clean'}
+    <CleanView />
+  {:else if files && view === 'watch'}
+    <WatchView {storage} />
   {:else}
   {#if storage.system}
     {@const system = storage.system}

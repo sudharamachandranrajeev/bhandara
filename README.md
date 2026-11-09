@@ -50,6 +50,13 @@ Coming in the next release:
   by file type, the largest files (filter by size and age), and files that are exact copies of each
   other. Delete what you don't need: it goes to the Trash (on Android it is deleted for good, after
   a warning).
+- 🧹 **Clean** (*Shodhana*) – find build output that rebuilds itself (Rust, Flutter, Node, Gradle,
+  Python) and package caches, all in one list. A folder is listed only when a marker file proves
+  which tool made it. Guards keep active projects, git-tracked files and synced folders safe. You
+  see a test run first, then choose Trash or delete for good
+  ([how it works](docs/space-watch.md)).
+- 🔔 **Space watch** – an alert when a drive runs low, which you can snooze or turn off. A daily
+  record shows what grew this week. An optional weekly clean is off until you turn it on.
 
 ## 🚀 Get started
 
@@ -151,7 +158,9 @@ flowchart LR
 - **Duplicates** are found by comparing file contents, not names. Two links to the same file are
   not counted as copies.
 - **It never changes your files on its own.** It only ejects a drive or deletes an item when you
-  ask, and it asks again before deleting.
+  ask, and it asks again before deleting. The one exception is the scheduled clean, and only if
+  you turn it on. It removes build output only, past the same guards, and lists every folder in the
+  receipts.
 
 ## ❓ FAQ and troubleshooting
 

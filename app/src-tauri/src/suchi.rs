@@ -32,7 +32,7 @@ struct Progress {
 #[derive(Serialize, Clone)]
 pub struct ScanRoot {
     name: String,
-    path: PathBuf,
+    pub path: PathBuf,
 }
 
 #[derive(Serialize)]

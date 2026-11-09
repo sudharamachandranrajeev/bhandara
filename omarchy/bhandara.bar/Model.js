@@ -354,6 +354,26 @@ function parseHealth(text, nowSeconds) {
   return { worst: worst, stale: stale, drives: drives }
 }
 
+// ---------- Cleanable build output ----------
+// bhandara-watch (or the app's Clean view) records its last search here.
+
+var WATCH_STATE_COMMAND = "cat \"${XDG_DATA_HOME:-$HOME/.local/share}/dev.bhandara.app/watch-state.json\" 2>/dev/null"
+var RECLAIM_MIN_BYTES = 1e9
+
+// null unless at least RECLAIM_MIN_BYTES can be removed: smaller amounts
+// are not worth a line in the panel.
+function parseReclaimable(text) {
+  var state
+  try {
+    state = JSON.parse(text)
+  } catch (e) {
+    return null
+  }
+  var r = state && state.reclaimable
+  if (!r || !(r.bytes >= RECLAIM_MIN_BYTES)) return null
+  return { bytes: r.bytes, root: r.root || "", at: r.at || 0 }
+}
+
 // Usage sets the level; a drive health problem can only raise it.
 function combinedLevel(usage, worst) {
   if (worst === "replace") return "critical"

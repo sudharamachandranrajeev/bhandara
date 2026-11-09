@@ -7,6 +7,7 @@ use tauri::State;
 use tauri_plugin_storage_access::StorageAccessExt;
 
 mod health;
+mod shodhana;
 mod suchi;
 #[cfg(desktop)]
 mod tray;
@@ -78,6 +79,7 @@ pub fn run() {
         .plugin(tauri_plugin_storage_access::init())
         .manage(Storage::default())
         .manage(suchi::Suchi::default())
+        .manage(shodhana::Shodhana::default())
         .invoke_handler(tauri::generate_handler![
             volumes,
             throughput,
@@ -101,12 +103,28 @@ pub fn run() {
             suchi::exclusions,
             suchi::exclude,
             suchi::include,
+            shodhana::clean_rules,
+            shodhana::clean_scan,
+            shodhana::clean_stop,
+            shodhana::clean_remove,
+            shodhana::cache_list,
+            shodhana::cache_run,
+            shodhana::receipts,
+            shodhana::watch_settings,
+            shodhana::save_watch_settings,
+            shodhana::watch_status,
+            shodhana::growth,
+            shodhana::take_sample,
+            shodhana::open_system_cleanup,
         ])
         .setup(|_app| {
             #[cfg(desktop)]
             {
                 tray::setup(_app)?;
                 health::watch(_app.handle().clone());
+                // Linux runs the space watch from a user timer instead.
+                #[cfg(not(target_os = "linux"))]
+                shodhana::watch(_app.handle().clone());
             }
             Ok(())
         })
