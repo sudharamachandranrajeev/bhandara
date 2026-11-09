@@ -4,7 +4,7 @@ Bhandara can find build output that a tool will make again, remove it when you s
 
 ## Clean
 
-Open the dashboard, then **Clean**, pick a folder, and press **Find build output**.
+Open the dashboard, then **Clean**. Pick Home or a drive, or press **Choose folder…** for one folder inside them (for example your projects folder). Then press **Find build output**.
 
 A folder is listed only when a marker file proves which tool made it:
 

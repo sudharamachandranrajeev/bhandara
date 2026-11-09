@@ -16,6 +16,7 @@
     type ScanRoot,
     type Skip,
   } from './api'
+  import { open } from '@tauri-apps/plugin-dialog'
   import { formatAge, formatBytes } from './format'
   import Icon from './Icon.svelte'
 
@@ -53,6 +54,14 @@
       off.then((f) => f())
     }
   })
+
+  /** A folder chosen with the dialog, shown as its own button. */
+  const custom = $derived(root && !roots.some((r) => r.path === root) ? root : '')
+
+  async function chooseFolder() {
+    const picked = await open({ directory: true, defaultPath: root || undefined, title: 'Folder to search for build output' })
+    if (typeof picked === 'string') root = picked
+  }
 
   $effect(() => {
     if (preview && dialog && !dialog.open) dialog.showModal()
@@ -192,6 +201,15 @@
             {r.name}
           </button>
         {/each}
+        {#if custom}
+          <button class="root active" disabled={scanning} title={custom}>
+            <Icon name="folder" size={16} />
+            {custom.split(/[\\/]/).filter(Boolean).pop() ?? custom}
+          </button>
+        {/if}
+        {#if !isAndroid}
+          <button class="ghost" onclick={chooseFolder} disabled={scanning}>Choose folder…</button>
+        {/if}
       </div>
       {#if scanning}
         <button class="ghost" onclick={() => api.cleanStop()}><Icon name="stop" /> Stop</button>

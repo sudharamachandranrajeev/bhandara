@@ -79,12 +79,18 @@ struct Progress {
     total: usize,
 }
 
-/// Looks for build output under one of the scan roots. Emits
+/// Looks for build output in a scan root or any folder inside one. Emits
 /// `clean-progress` while sizing what it found.
 #[tauri::command]
 pub async fn clean_scan(app: AppHandle, storage: State<'_, Storage>, root: PathBuf) -> CommandResult<ScanView> {
-    if !crate::suchi::scan_roots(app.clone(), storage).iter().any(|r| r.path == root) {
-        return Err("unknown folder".into());
+    // Compare resolved paths so `..` or a symlink cannot reach outside, but
+    // scan the path as given (Windows resolves to a `\\?\` form).
+    let real = root.canonicalize().map_err(|_| "folder not found".to_string())?;
+    let inside = crate::suchi::scan_roots(app.clone(), storage)
+        .iter()
+        .any(|r| r.path.canonicalize().is_ok_and(|base| real.starts_with(base)));
+    if !real.is_dir() || !inside {
+        return Err("pick a folder inside your home or one of the listed drives".into());
     }
     let paths = paths(&app)?;
     tauri::async_runtime::spawn_blocking(move || {
