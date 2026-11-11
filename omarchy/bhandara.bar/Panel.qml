@@ -275,23 +275,26 @@ Panel {
           trackColor: Util.alpha(root.bar ? root.bar.barForeground : Color.foreground, 0.22)
         }
 
-        // Disk activity: lights up while data is moving.
-        Rectangle {
-          width: Math.max(4, Style.space(4))
-          height: width
-          radius: width / 2
-          anchors.horizontalCenter: parent.horizontalCenter
-          anchors.verticalCenter: parent.verticalCenter
-          color: Color.accent
-          opacity: root.busy ? 1 : 0
+        // Drive glyph so the ring reads as storage next to other bar rings.
+        // Disk activity: it turns accent and pulses while data is moving.
+        Text {
+          id: driveGlyph
+          anchors.centerIn: parent
+          textFormat: Text.PlainText
+          text: "󰋊"
+          font.family: ringButton.fontFamily
+          font.pixelSize: Math.max(8, Math.round((parent.width - 2) * 0.68))
+          color: root.busy ? Color.accent : ringButton.foreground
+          renderType: Text.NativeRendering
 
-          Behavior on opacity { NumberAnimation { duration: 260 } }
+          Behavior on color { ColorAnimation { duration: 260 } }
 
-          SequentialAnimation on scale {
+          SequentialAnimation on opacity {
             running: root.busy
             loops: Animation.Infinite
-            NumberAnimation { from: 1; to: 0.55; duration: 600; easing.type: Easing.InOutSine }
-            NumberAnimation { from: 0.55; to: 1; duration: 600; easing.type: Easing.InOutSine }
+            onRunningChanged: if (!running) driveGlyph.opacity = 1
+            NumberAnimation { from: 1; to: 0.45; duration: 600; easing.type: Easing.InOutSine }
+            NumberAnimation { from: 0.45; to: 1; duration: 600; easing.type: Easing.InOutSine }
           }
         }
       }
