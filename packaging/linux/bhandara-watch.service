@@ -1,6 +1,6 @@
 [Unit]
 Description=Bhandara space watch: low-space alerts, daily history, scheduled clean
-Documentation=https://github.com/sudharamachandranrajeev/bhandara
+Documentation=https://github.com/sudharamachandranrajeev/bhandara-storage-monitor
 
 [Service]
 Type=oneshot

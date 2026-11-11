@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/sudharamachandranrajeev/bhandara"><img src="app/src-tauri/icons/icon.png" alt="Bhandara" width="140"></a>
+  <a href="https://github.com/sudharamachandranrajeev/bhandara-storage-monitor"><img src="app/src-tauri/icons/icon.png" alt="Bhandara" width="140"></a>
   <br>
   Bhandara
   <br>
@@ -9,10 +9,10 @@
 <h4 align="center">See how full your disks are, what is filling them, and when they are busy.</h4>
 
 <p align="center">
-  <a href="https://github.com/sudharamachandranrajeev/bhandara/releases"><img src="https://img.shields.io/github/v/release/sudharamachandranrajeev/bhandara?include_prereleases&color=2b6cb0&label=download" alt="Latest release"></a>
+  <a href="https://github.com/sudharamachandranrajeev/bhandara-storage-monitor/releases"><img src="https://img.shields.io/github/v/release/sudharamachandranrajeev/bhandara-storage-monitor?include_prereleases&color=2b6cb0&label=download" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/works%20on-Omarchy%20%7C%20Windows%20%7C%20Android-555" alt="Works on Omarchy, Windows and Android">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-2e7d32" alt="Licence MIT"></a>
-  <a href="https://github.com/sudharamachandranrajeev/brahma"><img src="https://img.shields.io/badge/part%20of-Brahma-8a5cf6" alt="Part of Brahma"></a>
+  <a href="https://github.com/sudharamachandranrajeev/brahma-life-suite"><img src="https://img.shields.io/badge/part%20of-Brahma-8a5cf6" alt="Part of Brahma"></a>
 </p>
 
 <p align="center">
@@ -65,8 +65,8 @@ Coming in the next release:
 | Your device | What to use | Works on |
 | --- | --- | --- |
 | 🐧 Omarchy | The **bar widget** (Step 2) | Omarchy |
-| 🪟 Windows computer | `Bhandara_<version>_x64-setup.exe` or `Bhandara_<version>_x64_en-US.msi` from the [releases page](https://github.com/sudharamachandranrajeev/bhandara/releases) | Windows 10 and 11 (64-bit) |
-| 🤖 Android phone | `Bhandara_<version>_android-debug.apk` from the [releases page](https://github.com/sudharamachandranrajeev/bhandara/releases) | 64-bit ARM phones (most phones from the last few years) |
+| 🪟 Windows computer | `Bhandara_<version>_x64-setup.exe` or `Bhandara_<version>_x64_en-US.msi` from the [releases page](https://github.com/sudharamachandranrajeev/bhandara-storage-monitor/releases) | Windows 10 and 11 (64-bit) |
+| 🤖 Android phone | `Bhandara_<version>_android-debug.apk` from the [releases page](https://github.com/sudharamachandranrajeev/bhandara-storage-monitor/releases) | 64-bit ARM phones (most phones from the last few years) |
 | 🐧 Other Linux | The dashboard app, built from source (see [For developers](#%EF%B8%8F-for-developers)) | 64-bit Linux with WebKitGTK 4.1 |
 
 Releases are marked *pre-release*, so look under the newest one, not "Latest".
@@ -260,9 +260,9 @@ Bhandara sits alongside the **Brahma** family of private, self-hosted apps.
 
 | App | What it does |
 | --- | --- |
-| [brahma](https://github.com/sudharamachandranrajeev/brahma) | The shared core and the all-in-one app |
-| [bahya-nireekshana](https://github.com/sudharamachandranrajeev/bahya-nireekshana) | See how much internet data you use |
-| [ganana](https://github.com/sudharamachandranrajeev/ganana) | Track your AI tools' usage, cost and limits |
+| [brahma](https://github.com/sudharamachandranrajeev/brahma-life-suite) | The shared core and the all-in-one app |
+| [bahya-nireekshana](https://github.com/sudharamachandranrajeev/bahya-nireekshana-network-monitor) | See how much internet data you use |
+| [ganana](https://github.com/sudharamachandranrajeev/ganana-ai-usage-tracker) | Track your AI tools' usage, cost and limits |
 
 ## License
 

@@ -1,6 +1,6 @@
 [Unit]
 Description=Bhandara drive health report
-Documentation=https://github.com/sudharamachandranrajeev/bhandara
+Documentation=https://github.com/sudharamachandranrajeev/bhandara-storage-monitor
 
 [Service]
 Type=oneshot
